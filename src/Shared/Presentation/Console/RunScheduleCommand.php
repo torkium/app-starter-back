@@ -47,21 +47,21 @@ final class RunScheduleCommand extends Command
                 'delivery_timed_out_before' => $deliveryTimedOutBefore,
             ],
             [
-                'failed_at' => 'datetime',
-                'delivery_timed_out_before' => 'datetime',
+                'failed_at' => 'datetime_immutable',
+                'delivery_timed_out_before' => 'datetime_immutable',
             ],
         );
 
         $connection->executeStatement(
             'UPDATE outbox_messages SET claim_token = NULL, claimed_at = NULL WHERE published_at IS NULL AND failed_at IS NULL AND delivery_started_at IS NULL AND claimed_at IS NOT NULL AND claimed_at < :stale_before',
             ['stale_before' => $staleBefore],
-            ['stale_before' => 'datetime'],
+            ['stale_before' => 'datetime_immutable'],
         );
 
         $claimed = $connection->executeStatement(
             'UPDATE outbox_messages SET claim_token = :claim_token, claimed_at = :claimed_at WHERE published_at IS NULL AND failed_at IS NULL AND delivery_started_at IS NULL AND claim_token IS NULL ORDER BY created_at ASC LIMIT 50',
             ['claim_token' => $claimToken, 'claimed_at' => $now],
-            ['claimed_at' => 'datetime'],
+            ['claimed_at' => 'datetime_immutable'],
         );
 
         if ($claimed <= 0) {
