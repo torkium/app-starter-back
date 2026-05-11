@@ -32,9 +32,11 @@ abstract class ApiTestCase extends WebTestCase
         parent::setUp();
 
         self::ensureKernelShutdown();
-        $this->client = static::createClient();
+        static::bootKernel();
         $this->resetDatabase();
         $this->resetUploadedMedia();
+        self::ensureKernelShutdown();
+        $this->client = static::createClient();
     }
 
     protected function tearDown(): void
