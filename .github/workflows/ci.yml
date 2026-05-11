@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+concurrency:
+  group: starter-back-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: intl, pdo_mysql, zip, redis
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.composer/cache/files
+            vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-scripts
+
+      - name: Audit Composer dependencies
+        run: composer audit
+
+      - name: Prepare JWT keys for CI
+        run: |
+          mkdir -p config/jwt
+          openssl genrsa -out config/jwt/private.pem 4096
+          openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem
+          chmod 600 config/jwt/private.pem
+
+      - name: Lint Symfony configuration
+        env:
+          APP_ENV: test
+          APP_SECRET: test-secret
+          DATABASE_URL: sqlite:///%kernel.project_dir%/var/test.db
+          MAILER_DSN: null://null
+          MERCURE_URL: http://localhost/.well-known/mercure
+          MERCURE_PUBLIC_URL: http://localhost/.well-known/mercure
+          MERCURE_JWT_SECRET: test-mercure-secret
+          JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
+          JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
+          JWT_PASSPHRASE: test-jwt-passphrase
+          STRIPE_SECRET_KEY: test
+          STRIPE_WEBHOOK_SECRET: test
+        run: |
+          php bin/console lint:yaml config --parse-tags
+          php bin/console lint:twig templates
+          php bin/console lint:container --env=test
+
+      - name: Run PHPUnit
+        env:
+          APP_ENV: test
+          APP_SECRET: test-secret
+          DATABASE_URL: sqlite:///%kernel.project_dir%/var/test.db
+          MAILER_DSN: null://null
+          MERCURE_URL: http://localhost/.well-known/mercure
+          MERCURE_PUBLIC_URL: http://localhost/.well-known/mercure
+          MERCURE_JWT_SECRET: test-mercure-secret
+          JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
+          JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
+          JWT_PASSPHRASE: test-jwt-passphrase
+          STRIPE_SECRET_KEY: test
+          STRIPE_WEBHOOK_SECRET: test
+        run: php bin/phpunit --do-not-cache-result
+
+  docker-build:
+    needs: quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare JWT keys for runtime smoke
+        run: |
+          mkdir -p config/jwt
+          openssl genrsa -out config/jwt/private.pem 4096
+          openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem
+          chmod 600 config/jwt/private.pem
+
+      - name: Build Docker image
+        run: docker build -t starter-back-ci:${{ github.sha }} .
+
+      - name: Smoke test runtime image
+        run: |
+          set -euo pipefail
+          export JWT_PRIVATE_KEY_PEM="$(cat config/jwt/private.pem)"
+          export JWT_PUBLIC_KEY_PEM="$(cat config/jwt/public.pem)"
+
+          cid="$(docker run -d -p 18080:8080 \
+            -e APP_ENV=prod \
+            -e APP_SECRET=test-secret \
+            -e APP_FRONT_BASE_URL=http://localhost:3000 \
+            -e APP_MEDIA_PUBLIC_BASE_URL=http://localhost:18080/uploads/media \
+            -e DEFAULT_URI=http://localhost:18080 \
+            -e DATABASE_URL='mysql://app:app@db:3306/starter?serverVersion=8.0.32&charset=utf8mb4' \
+            -e JWT_SECRET_KEY='/app/var/runtime/jwt/private.pem' \
+            -e JWT_PUBLIC_KEY='/app/var/runtime/jwt/public.pem' \
+            -e JWT_PASSPHRASE=test-jwt-passphrase \
+            -e JWT_PRIVATE_KEY_PEM="$JWT_PRIVATE_KEY_PEM" \
+            -e JWT_PUBLIC_KEY_PEM="$JWT_PUBLIC_KEY_PEM" \
+            -e MERCURE_URL=http://mercure/.well-known/mercure \
+            -e MERCURE_PUBLIC_URL=http://localhost/.well-known/mercure \
+            -e MERCURE_JWT_SECRET=test-mercure-secret \
+            -e MESSENGER_TRANSPORT_DSN='doctrine://default?auto_setup=1' \
+            -e MESSENGER_MAIL_TRANSPORT_DSN='doctrine://default?queue_name=mail&auto_setup=1' \
+            -e MESSENGER_OUTBOX_TRANSPORT_DSN='doctrine://default?queue_name=outbox&auto_setup=1' \
+            -e MESSENGER_FAILED_TRANSPORT_DSN='doctrine://default?queue_name=failed&auto_setup=1' \
+            -e MAILER_DSN='null://null' \
+            -e MAILER_FROM=no-reply@example.test \
+            starter-back-ci:${{ github.sha }})"
+
+          cleanup() {
+            docker rm -f "$cid" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          for _ in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:18080/api/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://127.0.0.1:18080/api/health
+          docker exec "$cid" php bin/console about --env=prod
+
+  mysql-functional:
+    needs: quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare JWT keys for Docker tests
+        run: |
+          mkdir -p config/jwt
+          openssl genrsa -out config/jwt/private.pem 4096
+          openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem
+          chmod 600 config/jwt/private.pem
+
+      - name: Run MySQL-backed functional tests in Docker
+        run: |
+          docker compose -f docker-compose.test.yml build app
+          docker compose -f docker-compose.test.yml run --rm app php bin/phpunit --do-not-cache-result

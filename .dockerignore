@@ -1,0 +1,10 @@
+.git
+/var
+/vendor
+.phpunit.cache
+.env
+.env.*
+!/env/
+!/.env.example
+.env.local
+config/jwt

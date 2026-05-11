@@ -1,0 +1,3 @@
+parameters:
+    app.stripe.default_success_url: '%env(default::STRIPE_DEFAULT_SUCCESS_URL)%'
+    app.stripe.default_cancel_url: '%env(default::STRIPE_DEFAULT_CANCEL_URL)%'

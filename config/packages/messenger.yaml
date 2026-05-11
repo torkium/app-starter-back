@@ -1,0 +1,35 @@
+framework:
+    messenger:
+        failure_transport: failed
+
+        transports:
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 3
+                    multiplier: 2
+                    max_delay: 60000
+            async_mail:
+                dsn: '%env(MESSENGER_MAIL_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 3
+                    multiplier: 2
+                    max_delay: 60000
+            async_outbox:
+                dsn: '%env(MESSENGER_OUTBOX_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 3
+                    multiplier: 2
+                    max_delay: 60000
+            failed:
+                dsn: '%env(MESSENGER_FAILED_TRANSPORT_DSN)%'
+
+        default_bus: messenger.bus.default
+
+        buses:
+            messenger.bus.default: []
+
+        routing:
+            App\Shared\Application\Message\DispatchOutboxMessage: async_outbox
+            App\Shared\Application\Message\SendTransactionalEmailMessage: async_mail
+            App\Shared\Application\Message\PublishRealtimeUpdateMessage: async

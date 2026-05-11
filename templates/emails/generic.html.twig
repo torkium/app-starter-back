@@ -1,0 +1,5 @@
+<h1>{{ headline }}</h1>
+<p>{{ body }}</p>
+{% if data.actionUrl is defined %}
+    <p><a href="{{ data.actionUrl }}">Ouvrir le lien</a></p>
+{% endif %}

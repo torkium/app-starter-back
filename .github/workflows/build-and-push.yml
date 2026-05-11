@@ -1,0 +1,318 @@
+name: Build And Push
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment environment tag to use
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+        default: staging
+      dispatch_infra:
+        description: Trigger infra deployment dispatch if configured
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: starter-back-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      branch_slug: ${{ steps.compute.outputs.branch_slug }}
+      deploy_env: ${{ steps.compute.outputs.deploy_env }}
+      image_name: ${{ steps.compute.outputs.image_name }}
+      short_sha: ${{ steps.compute.outputs.short_sha }}
+      version_tag: ${{ steps.compute.outputs.version_tag }}
+      should_dispatch: ${{ steps.compute.outputs.should_dispatch }}
+
+    steps:
+      - name: Compute image metadata
+        id: compute
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          INPUT_DISPATCH_INFRA: ${{ inputs.dispatch_infra }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          branch_slug="$(printf '%s' "${REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]+#-#g; s#^-+##; s#-+$##')"
+          short_sha="${SHA::7}"
+
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            deploy_env="${INPUT_ENVIRONMENT}"
+          else
+            case "${REF_NAME}" in
+              develop) deploy_env="dev" ;;
+              main) deploy_env="staging" ;;
+              *) deploy_env="${branch_slug}" ;;
+            esac
+          fi
+
+          should_dispatch="false"
+          if [ "${EVENT_NAME}" = "push" ] && { [ "${REF_NAME}" = "develop" ] || [ "${REF_NAME}" = "main" ]; }; then
+            should_dispatch="true"
+          fi
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ] && [ "${INPUT_DISPATCH_INFRA}" = "true" ]; then
+            should_dispatch="true"
+          fi
+
+          image_name="ghcr.io/${REPOSITORY_OWNER}/${REPOSITORY_NAME}"
+          version_tag="${deploy_env}-${short_sha}"
+
+          {
+            echo "branch_slug=${branch_slug}"
+            echo "deploy_env=${deploy_env}"
+            echo "image_name=${image_name}"
+            echo "short_sha=${short_sha}"
+            echo "version_tag=${version_tag}"
+            echo "should_dispatch=${should_dispatch}"
+          } >> "$GITHUB_OUTPUT"
+
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: intl, pdo_mysql, zip, redis
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.composer/cache/files
+            vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-scripts
+
+      - name: Audit Composer dependencies
+        run: composer audit
+
+      - name: Prepare JWT keys for CI
+        run: |
+          mkdir -p config/jwt
+          openssl genrsa -out config/jwt/private.pem 4096
+          openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem
+          chmod 600 config/jwt/private.pem
+
+      - name: Lint Symfony configuration
+        env:
+          APP_ENV: test
+          APP_SECRET: test-secret
+          DATABASE_URL: sqlite:///%kernel.project_dir%/var/test.db
+          MAILER_DSN: null://null
+          MERCURE_URL: http://localhost/.well-known/mercure
+          MERCURE_PUBLIC_URL: http://localhost/.well-known/mercure
+          MERCURE_JWT_SECRET: test-mercure-secret
+          JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
+          JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
+          JWT_PASSPHRASE: test-jwt-passphrase
+          STRIPE_SECRET_KEY: test
+          STRIPE_WEBHOOK_SECRET: test
+        run: |
+          php bin/console lint:yaml config --parse-tags
+          php bin/console lint:twig templates
+          php bin/console lint:container --env=test
+
+      - name: Run PHPUnit
+        env:
+          APP_ENV: test
+          APP_SECRET: test-secret
+          DATABASE_URL: sqlite:///%kernel.project_dir%/var/test.db
+          MAILER_DSN: null://null
+          MERCURE_URL: http://localhost/.well-known/mercure
+          MERCURE_PUBLIC_URL: http://localhost/.well-known/mercure
+          MERCURE_JWT_SECRET: test-mercure-secret
+          JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
+          JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
+          JWT_PASSPHRASE: test-jwt-passphrase
+          STRIPE_SECRET_KEY: test
+          STRIPE_WEBHOOK_SECRET: test
+        run: php bin/phpunit --do-not-cache-result
+
+  smoke-image:
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare JWT keys for runtime smoke
+        run: |
+          mkdir -p config/jwt
+          openssl genrsa -out config/jwt/private.pem 4096
+          openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem
+          chmod 600 config/jwt/private.pem
+
+      - name: Build Docker image
+        run: docker build -t starter-back-smoke:${{ github.sha }} .
+
+      - name: Smoke test runtime image
+        run: |
+          set -euo pipefail
+          export JWT_PRIVATE_KEY_PEM="$(cat config/jwt/private.pem)"
+          export JWT_PUBLIC_KEY_PEM="$(cat config/jwt/public.pem)"
+
+          cid="$(docker run -d -p 18080:8080 \
+            -e APP_ENV=prod \
+            -e APP_SECRET=test-secret \
+            -e APP_FRONT_BASE_URL=http://localhost:3000 \
+            -e APP_MEDIA_PUBLIC_BASE_URL=http://localhost:18080/uploads/media \
+            -e DEFAULT_URI=http://localhost:18080 \
+            -e DATABASE_URL='mysql://app:app@db:3306/starter?serverVersion=8.0.32&charset=utf8mb4' \
+            -e JWT_SECRET_KEY='/app/var/runtime/jwt/private.pem' \
+            -e JWT_PUBLIC_KEY='/app/var/runtime/jwt/public.pem' \
+            -e JWT_PASSPHRASE=test-jwt-passphrase \
+            -e JWT_PRIVATE_KEY_PEM="$JWT_PRIVATE_KEY_PEM" \
+            -e JWT_PUBLIC_KEY_PEM="$JWT_PUBLIC_KEY_PEM" \
+            -e MERCURE_URL=http://mercure/.well-known/mercure \
+            -e MERCURE_PUBLIC_URL=http://localhost/.well-known/mercure \
+            -e MERCURE_JWT_SECRET=test-mercure-secret \
+            -e MESSENGER_TRANSPORT_DSN='doctrine://default?auto_setup=1' \
+            -e MESSENGER_MAIL_TRANSPORT_DSN='doctrine://default?queue_name=mail&auto_setup=1' \
+            -e MESSENGER_OUTBOX_TRANSPORT_DSN='doctrine://default?queue_name=outbox&auto_setup=1' \
+            -e MESSENGER_FAILED_TRANSPORT_DSN='doctrine://default?queue_name=failed&auto_setup=1' \
+            -e MAILER_DSN='null://null' \
+            -e MAILER_FROM=no-reply@example.test \
+            starter-back-smoke:${{ github.sha }})"
+
+          cleanup() {
+            docker rm -f "$cid" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          for _ in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:18080/api/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://127.0.0.1:18080/api/health
+          docker exec "$cid" php bin/console about --env=prod
+
+  mysql-functional:
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare JWT keys for Docker tests
+        run: |
+          mkdir -p config/jwt
+          openssl genrsa -out config/jwt/private.pem 4096
+          openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem
+          chmod 600 config/jwt/private.pem
+
+      - name: Run MySQL-backed functional tests in Docker
+        run: |
+          docker compose -f docker-compose.test.yml build app
+          docker compose -f docker-compose.test.yml run --rm app php bin/phpunit --do-not-cache-result
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs:
+      - metadata
+      - quality
+      - smoke-image
+      - mysql-functional
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ needs.metadata.outputs.image_name }}
+          tags: |
+            type=raw,value=${{ needs.metadata.outputs.deploy_env }}
+            type=raw,value=${{ needs.metadata.outputs.version_tag }}
+            type=raw,value=sha-${{ needs.metadata.outputs.short_sha }}
+            type=raw,value=${{ needs.metadata.outputs.branch_slug }}-${{ needs.metadata.outputs.short_sha }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  dispatch-infra:
+    runs-on: ubuntu-latest
+    needs:
+      - metadata
+      - build-and-push
+    if: needs.metadata.outputs.should_dispatch == 'true' && vars.INFRA_REPOSITORY != ''
+
+    steps:
+      - name: Check dispatch token
+        env:
+          DISPATCH_TOKEN: ${{ secrets.INFRA_REPOSITORY_DISPATCH_TOKEN }}
+        run: |
+          test -n "${DISPATCH_TOKEN}"
+
+      - name: Dispatch deployment to infra repository
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.INFRA_REPOSITORY_DISPATCH_TOKEN }}
+          repository: ${{ vars.INFRA_REPOSITORY }}
+          event-type: deploy
+          client-payload: >-
+            {
+              "environment": "${{ needs.metadata.outputs.deploy_env }}",
+              "app": "back",
+              "image": "${{ needs.metadata.outputs.image_name }}",
+              "version": "${{ needs.metadata.outputs.version_tag }}",
+              "repository": "${{ github.repository }}",
+              "source_repository": "${{ github.repository }}",
+              "source_sha": "${{ github.sha }}"
+            }

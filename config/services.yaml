@@ -1,0 +1,88 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+# See also https://symfony.com/doc/current/service_container/import.html
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+    app.front_base_url: '%env(default::APP_FRONT_BASE_URL)%'
+    app.media_upload_directory: '%kernel.project_dir%/var/media/uploads'
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/'
+
+    App\Shared\Application\Http\RequestRateLimiter:
+        arguments:
+            $authLoginLimiter: '@limiter.auth_login'
+            $authRegisterLimiter: '@limiter.auth_register'
+            $authForgotPasswordLimiter: '@limiter.auth_forgot_password'
+            $authSensitiveLimiter: '@limiter.auth_sensitive'
+            $webhookLimiter: '@limiter.webhook'
+
+    App\Shared\Infrastructure\Http\HttpRequestLoggerSubscriber:
+        arguments:
+            $httpLogger: '@monolog.logger.http'
+
+    App\Shared\Infrastructure\Messenger\MessengerLoggerSubscriber:
+        arguments:
+            $messengerLogger: '@monolog.logger.messenger'
+
+    App\Shared\Infrastructure\Http\ExceptionProblemSubscriber:
+        arguments:
+            $logger: '@logger'
+
+    App\Shared\Infrastructure\Http\RequestIdProcessor:
+        tags:
+            - { name: monolog.processor }
+
+    App\Billing\Application\Port\StripeCheckoutGatewayInterface:
+        alias: App\Shared\Infrastructure\Stripe\StripeCheckoutGateway
+
+    App\Identity\Application\Port\TokenGeneratorInterface:
+        alias: App\Identity\Infrastructure\Security\RandomTokenGenerator
+
+    App\Shared\Application\Port\ClockInterface:
+        alias: App\Shared\Infrastructure\Clock\SystemClock
+
+    App\Shared\Application\Port\MailerPortInterface:
+        alias: App\Shared\Infrastructure\Mailer\SymfonyMailerPort
+
+    App\Shared\Application\Port\RealtimePublisherInterface:
+        alias: App\Shared\Infrastructure\Realtime\MercureRealtimePublisher
+
+    App\Shared\Application\Port\TransactionManagerInterface:
+        alias: App\Shared\Infrastructure\Persistence\DoctrineTransactionManager
+
+    App\Shared\Infrastructure\Stripe\StripeCheckoutGateway:
+        arguments:
+            $secretKey: '%env(default::STRIPE_SECRET_KEY)%'
+            $webhookSecret: '%env(default::STRIPE_WEBHOOK_SECRET)%'
+
+    App\Shared\Infrastructure\Mailer\SymfonyMailerPort:
+        arguments:
+            $fromAddress: '%env(default::MAILER_FROM)%'
+
+    App\Identity\Application\Service\IdentityManager:
+        arguments:
+            $frontBaseUrl: '%app.front_base_url%'
+
+    App\Billing\Application\Service\BillingManager:
+        arguments:
+            $frontBaseUrl: '%app.front_base_url%'
+
+    App\Media\Infrastructure\Storage\LocalDirectUploadStorage:
+        arguments:
+            $uploadDirectory: '%app.media_upload_directory%'
+
+    # add more service definitions when explicit configuration is needed
+    # please note that last definitions always *replace* previous ones

@@ -1,0 +1,44 @@
+services:
+  app:
+    build: .
+    env_file:
+      - .env
+      - .env.test
+    environment:
+      APP_ENV: test
+    volumes:
+      - ./config/jwt:/run/starter-secrets/jwt:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      mercure:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
+  db:
+    image: mysql:8.4
+    command: ["mysqld", "--sql-mode="]
+    environment:
+      MYSQL_DATABASE: starter_test
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+      MYSQL_ROOT_PASSWORD: root
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mercure:
+    image: dunglas/mercure:latest
+    environment:
+      SERVER_NAME: ":80"
+      MERCURE_PUBLISHER_JWT_KEY: "change-me"
+      MERCURE_SUBSCRIBER_JWT_KEY: "change-me"
+      MERCURE_EXTRA_DIRECTIVES: |
+        anonymous
+        subscriptions
+
+  mailpit:
+    image: axllent/mailpit:latest

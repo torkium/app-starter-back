@@ -1,0 +1,100 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./config/jwt:/run/starter-secrets/jwt:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      mercure:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/api/health') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  worker_default:
+    build: .
+    command: php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M
+    env_file:
+      - .env
+    volumes:
+      - ./config/jwt:/run/starter-secrets/jwt:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker_mail:
+    build: .
+    command: php bin/console messenger:consume async_mail --time-limit=3600 --memory-limit=256M
+    env_file:
+      - .env
+    volumes:
+      - ./config/jwt:/run/starter-secrets/jwt:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker_outbox:
+    build: .
+    command: php bin/console messenger:consume async_outbox --time-limit=3600 --memory-limit=256M
+    env_file:
+      - .env
+    volumes:
+      - ./config/jwt:/run/starter-secrets/jwt:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  scheduler:
+    build: .
+    command:
+      - sh
+      - -lc
+      - while true; do php bin/console app:schedule:run; sleep 60; done
+    env_file:
+      - .env
+    volumes:
+      - ./config/jwt:/run/starter-secrets/jwt:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.4
+    command: ["mysqld", "--sql-mode="]
+    environment:
+      MYSQL_DATABASE: starter
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mercure:
+    image: dunglas/mercure:latest
+    environment:
+      SERVER_NAME: ":80"
+      MERCURE_PUBLISHER_JWT_KEY: "change-me"
+      MERCURE_SUBSCRIBER_JWT_KEY: "change-me"
+      MERCURE_EXTRA_DIRECTIVES: |
+        anonymous
+        subscriptions
+    ports:
+      - "8081:80"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"

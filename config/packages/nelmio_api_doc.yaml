@@ -1,0 +1,16 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: Starter Back API
+            description: Starter backend Symfony DDD centré sur User avec JWT, outbox, Mercure et Stripe.
+            version: 1.0.0
+        components:
+            securitySchemes:
+                bearerAuth:
+                    type: http
+                    scheme: bearer
+                    bearerFormat: JWT
+    areas:
+        default:
+            path_patterns:
+                - ^/api(?!/doc)
