@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'user_action_tokens')]
+#[ORM\UniqueConstraint(name: 'uniq_user_action_token_hash', columns: ['token_hash'])]
 class UserActionToken
 {
     #[ORM\Id]
@@ -18,7 +19,7 @@ class UserActionToken
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $user;
 
-    #[ORM\Column(length: 64, unique: true)]
+    #[ORM\Column(length: 64)]
     private string $tokenHash;
 
     #[ORM\Column(length: 32)]

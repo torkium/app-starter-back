@@ -60,8 +60,8 @@ final class AdminUserCrudController extends AbstractCrudController
             ])
             ->allowMultipleChoices()
             ->renderExpanded(false)
-            ->hideOnForm();
-        yield BooleanField::new('active')->hideOnForm();
+            ->onlyOnForms();
+        yield BooleanField::new('active');
         yield Field::new('plainPassword', 'Password')
             ->setFormType(PasswordType::class)
             ->setFormTypeOption('mapped', false)

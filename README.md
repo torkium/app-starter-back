@@ -113,8 +113,8 @@ docker compose exec app php bin/console app:admin-user:create admin@example.test
 ```
 
 Optional:
-- add the password as the second argument only for non-interactive automation
-- `ROLE_ADMIN` is limited to day-to-day back-office actions on users, legal documents, and billing plans
+- use `--password-env ADMIN_BOOTSTRAP_PASSWORD` for non-interactive automation
+- `ROLE_ADMIN` is limited to day-to-day back-office viewing on users and write access to legal documents and billing plans
 - `ROLE_SUPER_ADMIN` is required for admin account management and technical/audit views
 
 ## Useful Commands

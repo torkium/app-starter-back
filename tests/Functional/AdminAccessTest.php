@@ -29,6 +29,9 @@ final class AdminAccessTest extends ApiTestCase
 
         $this->client->request('GET', '/admin/outbox-message');
         self::assertSame(Response::HTTP_FORBIDDEN, $this->client->getResponse()->getStatusCode());
+
+        $this->client->request('GET', '/admin/user/new');
+        self::assertSame(Response::HTTP_FORBIDDEN, $this->client->getResponse()->getStatusCode());
     }
 
     public function testSuperAdminCanOpenProtectedCrudScreens(): void
@@ -49,12 +52,14 @@ final class AdminAccessTest extends ApiTestCase
     {
         $application = new Application(self::$kernel);
         $tester = new CommandTester($application->find('app:admin-user:create'));
+        putenv('STARTER_ADMIN_PASSWORD=Sup3rStrongAdminPass!');
         $exitCode = $tester->execute([
             'email' => 'ops@example.test',
-            'password' => 'Sup3rStrongAdminPass!',
             'display-name' => 'Ops Admin',
+            '--password-env' => 'STARTER_ADMIN_PASSWORD',
             '--super-admin' => true,
         ]);
+        putenv('STARTER_ADMIN_PASSWORD');
 
         self::assertSame(0, $exitCode);
         self::assertStringContainsString('Admin user "ops@example.test" created.', $tester->getDisplay());

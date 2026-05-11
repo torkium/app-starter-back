@@ -106,37 +106,32 @@ abstract class ApiTestCase extends WebTestCase
         $schemaManager = $connection->createSchemaManager();
         $tables = $schemaManager->listTableNames();
 
-        if ([] === $tables) {
-            $this->initializeDatabaseSchema();
-            $schemaManager = $connection->createSchemaManager();
-            $tables = $schemaManager->listTableNames();
-        }
-
-        $platform = $connection->getDatabasePlatform();
-        if ($platform instanceof AbstractMySQLPlatform) {
-            $this->truncateMysqlTables($connection, $tables);
-
-            return;
-        }
-
-        foreach ($tables as $table) {
-            $connection->executeStatement('DELETE FROM '.$table);
-        }
+        $this->dropDatabaseTables($connection, $tables);
+        $this->initializeDatabaseSchema();
     }
 
     /**
      * @param list<string> $tables
      */
-    private function truncateMysqlTables(Connection $connection, array $tables): void
+    private function dropDatabaseTables(Connection $connection, array $tables): void
     {
-        $connection->executeStatement('SET FOREIGN_KEY_CHECKS=0');
+        if ([] === $tables) {
+            return;
+        }
+
+        $platform = $connection->getDatabasePlatform();
+        if ($platform instanceof AbstractMySQLPlatform) {
+            $connection->executeStatement('SET FOREIGN_KEY_CHECKS=0');
+        }
 
         try {
             foreach ($tables as $table) {
-                $connection->executeStatement('TRUNCATE TABLE `'.$table.'`');
+                $connection->executeStatement('DROP TABLE '.$platform->quoteIdentifier($table));
             }
         } finally {
-            $connection->executeStatement('SET FOREIGN_KEY_CHECKS=1');
+            if ($platform instanceof AbstractMySQLPlatform) {
+                $connection->executeStatement('SET FOREIGN_KEY_CHECKS=1');
+            }
         }
     }
 

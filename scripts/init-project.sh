@@ -128,6 +128,9 @@ FILES=(
   "docker/entrypoint.sh"
   "scripts/init.sh"
   "config/packages/nelmio_api_doc.yaml"
+  "src/Admin/Presentation/Controller/AdminDashboardController.php"
+  "templates/admin/dashboard.html.twig"
+  "templates/admin/security/login.html.twig"
   "src/Shared/Presentation/Controller/HealthController.php"
   "src/Shared/Infrastructure/Outbox/DispatchOutboxMessageHandler.php"
   "tests/Functional/HealthControllerTest.php"
@@ -149,6 +152,7 @@ for file in "${FILES[@]}"; do
   replace_literal "$target" "App Back API" "${PROJECT_TITLE} Back API"
   replace_literal "$target" "Backend Symfony DDD centre sur User avec JWT, outbox, Mercure et Stripe." "${PROJECT_TITLE} Back API Symfony DDD centree sur User avec JWT, outbox, Mercure et Stripe."
   replace_literal "$target" "Starter back" "${PROJECT_TITLE} back"
+  replace_literal "$target" "Starter Back Admin" "${PROJECT_TITLE} Admin"
   replace_literal "$target" "Starter backend Symfony DDD centré sur \`User\`, sans notion de \`Profile\`." "${PROJECT_TITLE} Back API Symfony DDD centree sur \`User\`, sans notion de \`Profile\`."
   replace_literal "$target" "Starter backend Symfony DDD centré sur User avec JWT, outbox, Mercure et Stripe." "${PROJECT_TITLE} Back API Symfony DDD centree sur User avec JWT, outbox, Mercure et Stripe."
   replace_literal "$target" "<%s@starter.local>" "<%s@${PROJECT_NAME}.local>"
@@ -169,7 +173,7 @@ replace_literal "${ROOT_DIR}/src/Shared/Presentation/Controller/HealthController
 replace_literal "${ROOT_DIR}/tests/Functional/HealthControllerTest.php" "service' => '${BACK_REPO}'" "service' => '${BACK_REPO_UNDERSCORE}'"
 
 cat <<EOF
-Project templating applied in starter_back.
+Project templating applied in ${BACK_REPO}.
 
 Applied values:
 - project: ${PROJECT_NAME}

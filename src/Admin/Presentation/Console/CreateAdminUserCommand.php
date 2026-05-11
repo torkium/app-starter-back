@@ -33,6 +33,7 @@ final class CreateAdminUserCommand extends Command
             ->addArgument('email', InputArgument::REQUIRED)
             ->addArgument('password', InputArgument::OPTIONAL)
             ->addArgument('display-name', InputArgument::OPTIONAL, 'Displayed admin name')
+            ->addOption('password-env', null, InputOption::VALUE_REQUIRED, 'Read the admin password from this environment variable.')
             ->addOption('super-admin', null, InputOption::VALUE_NONE, 'Grant ROLE_SUPER_ADMIN as well.');
     }
 
@@ -40,7 +41,7 @@ final class CreateAdminUserCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $email = strtolower(trim((string) $input->getArgument('email')));
-        $password = trim((string) ($input->getArgument('password') ?? ''));
+        $password = $this->resolvePassword($input);
         $displayName = trim((string) ($input->getArgument('display-name') ?? ''));
 
         if ('' === $password) {
@@ -91,5 +92,17 @@ final class CreateAdminUserCommand extends Command
         $io->success(sprintf('Admin user "%s" created.', $email));
 
         return Command::SUCCESS;
+    }
+
+    private function resolvePassword(InputInterface $input): string
+    {
+        $passwordEnv = $input->getOption('password-env');
+        if (is_string($passwordEnv) && '' !== trim($passwordEnv)) {
+            $password = getenv(trim($passwordEnv));
+
+            return false === $password ? '' : trim($password);
+        }
+
+        return trim((string) ($input->getArgument('password') ?? ''));
     }
 }

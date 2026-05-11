@@ -8,6 +8,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'outbox_messages')]
+#[ORM\Index(name: 'idx_outbox_delivery_started', columns: ['delivery_started_at'])]
+#[ORM\Index(name: 'idx_outbox_failed_at', columns: ['failed_at'])]
 class OutboxMessage
 {
     #[ORM\Id]
