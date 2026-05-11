@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Identity\Domain\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
+#[UniqueEntity(fields: ['email'], message: 'This user email is already used.')]
 #[ORM\Entity]
 #[ORM\Table(name: 'users')]
 #[ORM\UniqueConstraint(name: 'uniq_user_email', columns: ['email'])]
@@ -56,6 +58,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getId(): string
     {
         return $this->id;
+    }
+
+    public function __toString(): string
+    {
+        return sprintf('%s %s <%s>', $this->firstName, $this->lastName, $this->email);
     }
 
     public function getEmail(): string
@@ -117,10 +124,47 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->lastName;
     }
 
+    public function rename(string $firstName, string $lastName): void
+    {
+        $this->firstName = trim($firstName);
+        $this->lastName = trim($lastName);
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
     public function changeEmail(string $email): void
     {
         $this->email = strtolower(trim($email));
         $this->emailVerified = false;
         $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    /**
+     * @param list<string> $roles
+     */
+    public function replaceRoles(array $roles): void
+    {
+        $normalized = array_values(array_unique(array_filter(array_map(
+            static fn (mixed $role): string => strtoupper(trim((string) $role)),
+            $roles,
+        ))));
+
+        $this->roles = [] !== $normalized ? $normalized : ['ROLE_USER'];
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    public function setEmailVerified(bool $emailVerified): void
+    {
+        $this->emailVerified = $emailVerified;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function getUpdatedAt(): \DateTimeImmutable
+    {
+        return $this->updatedAt;
     }
 }

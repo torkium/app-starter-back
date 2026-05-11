@@ -8,7 +8,11 @@ framework:
     http_client: true
     serializer:
         enabled: true
-    session: false
+    session:
+        enabled: true
+        handler_id: null
+        cookie_secure: auto
+        cookie_samesite: lax
     rate_limiter:
         auth_login:
             policy: sliding_window

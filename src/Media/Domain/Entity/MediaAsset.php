@@ -90,6 +90,11 @@ class MediaAsset
         return $this->id;
     }
 
+    public function __toString(): string
+    {
+        return $this->filename;
+    }
+
     public function getUser(): User
     {
         return $this->user;
@@ -100,9 +105,49 @@ class MediaAsset
         return $this->objectKey;
     }
 
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
+    public function getPurpose(): ?string
+    {
+        return $this->purpose;
+    }
+
+    public function getUploadTokenHash(): string
+    {
+        return $this->uploadTokenHash;
+    }
+
     public function getUploadTokenExpiresAt(): \DateTimeImmutable
     {
         return $this->uploadTokenExpiresAt;
+    }
+
+    public function getPreviewUrl(): ?string
+    {
+        return $this->previewUrl;
+    }
+
+    public function getUploadedAt(): ?\DateTimeImmutable
+    {
+        return $this->uploadedAt;
+    }
+
+    public function getCompletedAt(): ?\DateTimeImmutable
+    {
+        return $this->completedAt;
+    }
+
+    public function getChecksumSha256(): ?string
+    {
+        return $this->checksumSha256;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
     }
 
     public function getSize(): int

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Identity\Domain\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
+#[UniqueEntity(fields: ['code', 'version', 'locale'], message: 'This legal document version already exists for the locale.')]
 #[ORM\Entity]
 #[ORM\Table(name: 'legal_documents')]
 #[ORM\UniqueConstraint(name: 'uniq_legal_document_code_version_locale', columns: ['code', 'version', 'locale'])]
@@ -66,6 +68,11 @@ class LegalDocument
         return $this->id;
     }
 
+    public function __toString(): string
+    {
+        return sprintf('%s %s (%s)', $this->code, $this->version, $this->locale);
+    }
+
     public function getCode(): string
     {
         return $this->code;
@@ -99,5 +106,45 @@ class LegalDocument
     public function getPublishedAt(): \DateTimeImmutable
     {
         return $this->publishedAt;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function setCode(string $code): void
+    {
+        $this->code = trim($code);
+    }
+
+    public function setVersion(string $version): void
+    {
+        $this->version = trim($version);
+    }
+
+    public function setLocale(string $locale): void
+    {
+        $this->locale = strtolower(trim($locale));
+    }
+
+    public function setTitle(string $title): void
+    {
+        $this->title = trim($title);
+    }
+
+    public function setContent(string $content): void
+    {
+        $this->content = $content;
+    }
+
+    public function setActive(bool $active): void
+    {
+        $this->active = $active;
+    }
+
+    public function setPublishedAt(\DateTimeImmutable $publishedAt): void
+    {
+        $this->publishedAt = $publishedAt;
     }
 }

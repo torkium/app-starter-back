@@ -96,6 +96,27 @@ make test
 
 `make test` uses the dedicated test Compose override so it does not need to reuse the same published ports as another local stack.
 
+## Admin Back Office
+
+The starter now includes an EasyAdmin back office isolated from the public JWT user flow.
+
+Admin login:
+
+```text
+http://localhost:8080/admin
+```
+
+Create the first admin account:
+
+```bash
+docker compose exec app php bin/console app:admin-user:create admin@example.test --super-admin
+```
+
+Optional:
+- add the password as the second argument only for non-interactive automation
+- `ROLE_ADMIN` is limited to day-to-day back-office actions on users, legal documents, and billing plans
+- `ROLE_SUPER_ADMIN` is required for admin account management and technical/audit views
+
 ## Useful Commands
 
 ```bash

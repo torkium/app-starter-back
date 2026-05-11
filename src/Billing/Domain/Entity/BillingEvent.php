@@ -62,6 +62,39 @@ class BillingEvent
         return $this->user;
     }
 
+    public function getId(): string
+    {
+        return $this->id;
+    }
+
+    public function getExternalId(): string
+    {
+        return $this->externalId;
+    }
+
+    public function getType(): string
+    {
+        return $this->type;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getPayload(): array
+    {
+        return $this->payload;
+    }
+
+    public function getOccurredAt(): \DateTimeImmutable
+    {
+        return $this->occurredAt;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
     public function toView(): array
     {
         return [

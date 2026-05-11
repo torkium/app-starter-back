@@ -62,9 +62,44 @@ class PushSubscription
         return $this->user->getId() === $user->getId();
     }
 
+    public function getId(): string
+    {
+        return $this->id;
+    }
+
+    public function getUser(): User
+    {
+        return $this->user;
+    }
+
     public function getEndpoint(): string
     {
         return $this->endpoint;
+    }
+
+    public function getP256dh(): ?string
+    {
+        return $this->p256dh;
+    }
+
+    public function getAuth(): ?string
+    {
+        return $this->auth;
+    }
+
+    public function getExpirationTime(): ?int
+    {
+        return $this->expirationTime;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function getUpdatedAt(): \DateTimeImmutable
+    {
+        return $this->updatedAt;
     }
 
     public function touch(?string $p256dh, ?string $auth, ?int $expirationTime, \DateTimeImmutable $updatedAt): void

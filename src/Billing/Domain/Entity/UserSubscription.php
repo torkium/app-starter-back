@@ -64,9 +64,54 @@ class UserSubscription
         return $this->user;
     }
 
+    public function getId(): string
+    {
+        return $this->id;
+    }
+
     public function getPlan(): BillingPlan
     {
         return $this->plan;
+    }
+
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
+    public function getStripeCustomerId(): ?string
+    {
+        return $this->stripeCustomerId;
+    }
+
+    public function getStripeSubscriptionId(): ?string
+    {
+        return $this->stripeSubscriptionId;
+    }
+
+    public function getCurrentPeriodStart(): ?\DateTimeImmutable
+    {
+        return $this->currentPeriodStart;
+    }
+
+    public function getCurrentPeriodEnd(): ?\DateTimeImmutable
+    {
+        return $this->currentPeriodEnd;
+    }
+
+    public function isCancelAtPeriodEnd(): bool
+    {
+        return $this->cancelAtPeriodEnd;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function getUpdatedAt(): \DateTimeImmutable
+    {
+        return $this->updatedAt;
     }
 
     public function sync(

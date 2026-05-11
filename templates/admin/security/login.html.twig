@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Starter Back Admin{% endblock %}
+
+{% block body %}
+    <main style="min-height:100vh;display:grid;place-items:center;background:#f3f4f6;padding:2rem;">
+        <section style="width:min(100%,28rem);background:#fff;border-radius:1rem;padding:2rem;box-shadow:0 20px 45px rgba(15,23,42,.12);">
+            <p style="margin:0 0 .5rem;color:#2563eb;font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:.8rem;">Administration</p>
+            <h1 style="margin:0 0 1rem;font-size:2rem;color:#0f172a;">Starter Back Admin</h1>
+            <p style="margin:0 0 1.5rem;color:#475569;">Connexion au back-office EasyAdmin du starter.</p>
+
+            {% if error %}
+                <div style="margin-bottom:1rem;padding:.875rem 1rem;border-radius:.75rem;background:#fee2e2;color:#991b1b;">
+                    {{ error.messageKey|trans(error.messageData, 'security') }}
+                </div>
+            {% endif %}
+
+            <form method="post">
+                <label for="username" style="display:block;margin-bottom:.35rem;color:#0f172a;font-weight:600;">Email</label>
+                <input id="username" type="email" name="_username" value="{{ last_username }}" required autofocus style="width:100%;margin-bottom:1rem;padding:.8rem .9rem;border:1px solid #cbd5e1;border-radius:.75rem;">
+
+                <label for="password" style="display:block;margin-bottom:.35rem;color:#0f172a;font-weight:600;">Password</label>
+                <input id="password" type="password" name="_password" required style="width:100%;margin-bottom:1rem;padding:.8rem .9rem;border:1px solid #cbd5e1;border-radius:.75rem;">
+
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+                <button type="submit" style="width:100%;border:0;border-radius:.75rem;padding:.9rem 1rem;background:#0f172a;color:#fff;font-weight:700;cursor:pointer;">
+                    Sign in
+                </button>
+            </form>
+        </section>
+    </main>
+{% endblock %}

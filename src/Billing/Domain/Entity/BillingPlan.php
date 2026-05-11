@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Billing\Domain\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
+#[UniqueEntity(fields: ['code'], message: 'This billing plan code is already used.')]
 #[ORM\Entity]
 #[ORM\Table(name: 'billing_plans')]
 #[ORM\UniqueConstraint(name: 'uniq_billing_plan_code', columns: ['code'])]
@@ -71,6 +73,11 @@ class BillingPlan
         return $this->id;
     }
 
+    public function __toString(): string
+    {
+        return sprintf('%s (%s)', $this->name, $this->code);
+    }
+
     public function getCode(): string
     {
         return $this->code;
@@ -109,5 +116,50 @@ class BillingPlan
     public function isActive(): bool
     {
         return $this->active;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
+    public function setCode(string $code): void
+    {
+        $this->code = trim($code);
+    }
+
+    public function setName(string $name): void
+    {
+        $this->name = trim($name);
+    }
+
+    public function setDescription(?string $description): void
+    {
+        $this->description = null !== $description ? trim($description) : null;
+    }
+
+    public function setAmountMinor(int $amountMinor): void
+    {
+        $this->amountMinor = $amountMinor;
+    }
+
+    public function setCurrency(string $currency): void
+    {
+        $this->currency = strtolower(trim($currency));
+    }
+
+    public function setIntervalUnit(string $intervalUnit): void
+    {
+        $this->intervalUnit = trim($intervalUnit);
+    }
+
+    public function setStripePriceId(?string $stripePriceId): void
+    {
+        $this->stripePriceId = null !== $stripePriceId ? trim($stripePriceId) : null;
+    }
+
+    public function setActive(bool $active): void
+    {
+        $this->active = $active;
     }
 }

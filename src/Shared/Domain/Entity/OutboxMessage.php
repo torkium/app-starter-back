@@ -80,6 +80,11 @@ class OutboxMessage
         return $this->payload;
     }
 
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+
     public function isPublished(): bool
     {
         return null !== $this->publishedAt;
@@ -115,6 +120,11 @@ class OutboxMessage
     public function getClaimToken(): ?string
     {
         return $this->claimToken;
+    }
+
+    public function getClaimedAt(): ?\DateTimeImmutable
+    {
+        return $this->claimedAt;
     }
 
     public function getDeliveryStartedAt(): ?\DateTimeImmutable

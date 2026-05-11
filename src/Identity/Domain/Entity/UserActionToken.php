@@ -49,6 +49,11 @@ class UserActionToken
         return $this->user;
     }
 
+    public function getId(): string
+    {
+        return $this->id;
+    }
+
     public function getTokenHash(): string
     {
         return $this->tokenHash;
@@ -65,6 +70,16 @@ class UserActionToken
     public function getPayload(): ?array
     {
         return $this->payload;
+    }
+
+    public function getExpiresAt(): \DateTimeImmutable
+    {
+        return $this->expiresAt;
+    }
+
+    public function getUsedAt(): ?\DateTimeImmutable
+    {
+        return $this->usedAt;
     }
 
     public function isConsumable(\DateTimeImmutable $now): bool

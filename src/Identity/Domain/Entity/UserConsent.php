@@ -53,8 +53,28 @@ class UserConsent
         return $this->document;
     }
 
+    public function getUser(): User
+    {
+        return $this->user;
+    }
+
     public function getAcceptedAt(): \DateTimeImmutable
     {
         return $this->acceptedAt;
+    }
+
+    public function getId(): string
+    {
+        return $this->id;
+    }
+
+    public function getIpAddress(): ?string
+    {
+        return $this->ipAddress;
+    }
+
+    public function getUserAgent(): ?string
+    {
+        return $this->userAgent;
     }
 }

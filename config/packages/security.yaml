@@ -1,17 +1,41 @@
 security:
     password_hashers:
         App\Identity\Domain\Entity\User: 'auto'
+        App\Admin\Domain\Entity\AdminUser: 'auto'
+
+    role_hierarchy:
+        ROLE_SUPER_ADMIN: ROLE_ADMIN
 
     providers:
         app_user_provider:
             entity:
                 class: App\Identity\Domain\Entity\User
                 property: email
+        admin_user_provider:
+            entity:
+                class: App\Admin\Domain\Entity\AdminUser
+                property: email
 
     firewalls:
         dev:
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
+        admin:
+            pattern: ^/admin
+            lazy: true
+            provider: admin_user_provider
+            user_checker: App\Admin\Infrastructure\Security\AdminUserChecker
+            login_throttling:
+                max_attempts: 5
+                interval: '1 minute'
+            form_login:
+                login_path: app_admin_login
+                check_path: app_admin_login
+                default_target_path: app_admin_dashboard
+                enable_csrf: true
+            logout:
+                path: app_admin_logout
+                target: app_admin_login
         main:
             pattern: ^/api
             stateless: true
@@ -19,6 +43,10 @@ security:
             jwt: ~
 
     access_control:
+        - { path: ^/admin/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/admin/admin-user, roles: ROLE_SUPER_ADMIN }
+        - { path: ^/admin/(user-consent|refresh-token|user-action-token|user-subscription|billing-event|media-asset|push-subscription|outbox-message), roles: ROLE_SUPER_ADMIN }
+        - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/api/(health|doc|doc\.json), roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/(register|login|refresh|confirm-email|forgot-password|reset-password), roles: PUBLIC_ACCESS }
         - { path: ^/api/stripe/webhook, roles: PUBLIC_ACCESS }
