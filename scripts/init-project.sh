@@ -146,6 +146,8 @@ for file in "${FILES[@]}"; do
   replace_literal "$target" "starter_back" "$BACK_REPO"
   replace_literal "$target" "starter_front" "$FRONT_REPO"
   replace_literal "$target" "starter_infra" "$INFRA_REPO"
+  replace_literal "$target" "App Back API" "${PROJECT_TITLE} Back API"
+  replace_literal "$target" "Backend Symfony DDD centre sur User avec JWT, outbox, Mercure et Stripe." "${PROJECT_TITLE} Back API Symfony DDD centree sur User avec JWT, outbox, Mercure et Stripe."
   replace_literal "$target" "Starter back" "${PROJECT_TITLE} back"
   replace_literal "$target" "Starter backend Symfony DDD centré sur \`User\`, sans notion de \`Profile\`." "${PROJECT_TITLE} Back API Symfony DDD centree sur \`User\`, sans notion de \`Profile\`."
   replace_literal "$target" "Starter backend Symfony DDD centré sur User avec JWT, outbox, Mercure et Stripe." "${PROJECT_TITLE} Back API Symfony DDD centree sur User avec JWT, outbox, Mercure et Stripe."
