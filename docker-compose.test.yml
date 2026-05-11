@@ -2,7 +2,7 @@ services:
   app:
     build: .
     env_file:
-      - .env
+      - .env.example
       - .env.test
     environment:
       APP_ENV: test
