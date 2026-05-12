@@ -10,3 +10,5 @@
 controllers:
     resource: ../src/
     type: attribute
+    exclude:
+        - ../src/Story/

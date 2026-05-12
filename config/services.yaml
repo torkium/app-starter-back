@@ -22,6 +22,7 @@ services:
         resource: '../src/'
         exclude:
             - '../src/**/Domain/Entity/'
+            - '../src/Story/'
 
     App\Shared\Application\Http\RequestRateLimiter:
         arguments:
