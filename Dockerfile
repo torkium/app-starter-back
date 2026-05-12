@@ -41,6 +41,7 @@ COPY docker/entrypoint.sh /usr/local/bin/starter-back-entrypoint
 
 RUN chmod +x /usr/local/bin/starter-back-entrypoint \
     && mkdir -p config/jwt var/cache var/log \
+    && php bin/console assets:install public --no-interaction \
     && chown -R www-data:www-data /app /var/run/apache2 /var/lock/apache2 /var/log/apache2
 
 EXPOSE 8080
