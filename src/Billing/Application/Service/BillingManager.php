@@ -12,7 +12,7 @@ use App\Identity\Domain\Entity\User;
 use App\Shared\Application\Http\ApiProblemException;
 use App\Shared\Application\Port\ClockInterface;
 use App\Shared\Application\Port\TransactionManagerInterface;
-use App\Shared\Infrastructure\Outbox\OutboxRecorder;
+use App\Shared\Application\Port\OutboxRecorderInterface;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
@@ -23,7 +23,7 @@ final readonly class BillingManager
         private EntityManagerInterface $entityManager,
         private StripeCheckoutGatewayInterface $stripeGateway,
         private TransactionManagerInterface $transactionManager,
-        private OutboxRecorder $outboxRecorder,
+        private OutboxRecorderInterface $outboxRecorder,
         private ClockInterface $clock,
         private string $frontBaseUrl,
     ) {

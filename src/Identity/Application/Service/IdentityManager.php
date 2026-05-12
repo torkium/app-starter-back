@@ -15,7 +15,7 @@ use App\Shared\Application\Port\ClockInterface;
 use App\Shared\Application\Port\MailerPortInterface;
 use App\Shared\Application\Port\RealtimePublisherInterface;
 use App\Shared\Application\Port\TransactionManagerInterface;
-use App\Shared\Infrastructure\Outbox\OutboxRecorder;
+use App\Shared\Application\Port\OutboxRecorderInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -31,7 +31,7 @@ final readonly class IdentityManager
         private TokenGeneratorInterface $tokenGenerator,
         private MailerPortInterface $mailer,
         private RealtimePublisherInterface $realtimePublisher,
-        private OutboxRecorder $outboxRecorder,
+        private OutboxRecorderInterface $outboxRecorder,
         private ClockInterface $clock,
         private string $frontBaseUrl,
     ) {

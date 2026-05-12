@@ -8,6 +8,8 @@ use Symfony\Component\HttpFoundation\Request;
 
 final class JsonRequestDecoder
 {
+    private const MAX_JSON_BODY_BYTES = 262144;
+
     /**
      * @return array<string, mixed>
      */
@@ -16,6 +18,10 @@ final class JsonRequestDecoder
         $content = trim($request->getContent());
         if ('' === $content) {
             return [];
+        }
+
+        if (strlen($content) > self::MAX_JSON_BODY_BYTES) {
+            throw ApiProblemException::badRequest('JSON body is too large.');
         }
 
         try {

@@ -10,7 +10,7 @@ use App\Media\Domain\Entity\MediaAsset;
 use App\Shared\Application\Http\ApiProblemException;
 use App\Shared\Application\Port\ClockInterface;
 use App\Shared\Application\Port\TransactionManagerInterface;
-use App\Shared\Infrastructure\Outbox\OutboxRecorder;
+use App\Shared\Application\Port\OutboxRecorderInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -30,7 +30,7 @@ final readonly class MediaManager
         private EntityManagerInterface $entityManager,
         private DirectUploadStorageInterface $storage,
         private TransactionManagerInterface $transactionManager,
-        private OutboxRecorder $outboxRecorder,
+        private OutboxRecorderInterface $outboxRecorder,
         private ClockInterface $clock,
     ) {
     }
@@ -134,23 +134,33 @@ final readonly class MediaManager
             throw ApiProblemException::unprocessable('Le type MIME du contenu ne correspond pas à celui déclaré.');
         }
 
-        $this->transactionManager->run(function () use ($asset, $stream): void {
-            $stored = $this->storage->storeStream($asset->getObjectKey(), $stream, $asset->getSize());
-            if (!$this->matchesExpectedMimeType($asset->getMimeType(), $stored['detectedMimeType'])) {
-                throw ApiProblemException::unprocessable(sprintf(
-                    'The uploaded file content does not match the declared MIME type. Expected "%s", detected "%s".',
-                    $asset->getMimeType(),
-                    $stored['detectedMimeType'] ?? 'unknown',
-                ));
+        $storedObjectKey = null;
+        try {
+            $this->transactionManager->run(function () use ($asset, $stream, &$storedObjectKey): void {
+                $stored = $this->storage->storeStream($asset->getObjectKey(), $stream, $asset->getSize());
+                $storedObjectKey = $asset->getObjectKey();
+                if (!$this->matchesExpectedMimeType($asset->getMimeType(), $stored['detectedMimeType'])) {
+                    throw ApiProblemException::unprocessable(sprintf(
+                        'The uploaded file content does not match the declared MIME type. Expected "%s", detected "%s".',
+                        $asset->getMimeType(),
+                        $stored['detectedMimeType'] ?? 'unknown',
+                    ));
+                }
+
+                $asset->markUploaded($this->clock->now(), $stored['checksum']);
+                $this->outboxRecorder->record('media.binary_uploaded', 'default', [
+                    'assetId' => $asset->getId(),
+                    'userId' => $asset->getUser()->getId(),
+                    'objectKey' => $asset->getObjectKey(),
+                ]);
+            });
+        } catch (\Throwable $throwable) {
+            if (null !== $storedObjectKey) {
+                $this->storage->delete($storedObjectKey);
             }
 
-            $asset->markUploaded($this->clock->now(), $stored['checksum']);
-            $this->outboxRecorder->record('media.binary_uploaded', 'default', [
-                'assetId' => $asset->getId(),
-                'userId' => $asset->getUser()->getId(),
-                'objectKey' => $asset->getObjectKey(),
-            ]);
-        });
+            throw $throwable;
+        }
     }
 
     /**

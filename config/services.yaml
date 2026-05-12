@@ -20,6 +20,8 @@ services:
     # this creates a service per class whose id is the fully-qualified class name
     App\:
         resource: '../src/'
+        exclude:
+            - '../src/**/Domain/Entity/'
 
     App\Shared\Application\Http\RequestRateLimiter:
         arguments:
@@ -36,6 +38,10 @@ services:
     App\Shared\Infrastructure\Messenger\MessengerLoggerSubscriber:
         arguments:
             $messengerLogger: '@monolog.logger.messenger'
+
+    App\Shared\Infrastructure\Outbox\OutboxPayloadProtector:
+        arguments:
+            $secret: '%env(APP_SECRET)%'
 
     App\Shared\Infrastructure\Http\ExceptionProblemSubscriber:
         arguments:
@@ -59,6 +65,9 @@ services:
 
     App\Shared\Application\Port\RealtimePublisherInterface:
         alias: App\Shared\Infrastructure\Realtime\MercureRealtimePublisher
+
+    App\Shared\Application\Port\OutboxRecorderInterface:
+        alias: App\Shared\Infrastructure\Outbox\OutboxRecorder
 
     App\Shared\Application\Port\TransactionManagerInterface:
         alias: App\Shared\Infrastructure\Persistence\DoctrineTransactionManager

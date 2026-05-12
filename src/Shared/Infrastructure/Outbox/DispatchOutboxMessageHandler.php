@@ -22,6 +22,7 @@ final readonly class DispatchOutboxMessageHandler
         private ClockInterface $clock,
         private MailerInterface $mailer,
         private HubInterface $hub,
+        private OutboxPayloadProtector $payloadProtector,
     ) {
     }
 
@@ -42,16 +43,51 @@ final readonly class DispatchOutboxMessageHandler
 
         $this->entityManager->flush();
 
-        match ($outbox->getChannel()) {
-            'mail' => $this->dispatchMail($outbox->getId(), $outbox->getPayload()),
-            'realtime' => $this->dispatchRealtime($outbox->getId(), $outbox->getPayload()),
-            default => $this->dispatchRealtime([
-                'topic' => sprintf('/events/%s', $outbox->getTopic()),
-                'payload' => $outbox->getPayload(),
-            ], $outbox->getId()),
-        };
+        $payload = [];
+        $mailPayloadWasProtected = true;
 
-        $outbox->markPublished($this->clock->now());
+        try {
+            $payload = 'mail' === $outbox->getChannel()
+                ? $this->payloadProtector->reveal($outbox->getPayload())
+                : $outbox->getPayload();
+            $mailPayloadWasProtected = 'mail' !== $outbox->getChannel() || $this->payloadProtector->isProtected($outbox->getPayload());
+
+            match ($outbox->getChannel()) {
+                'mail' => $this->dispatchMail($outbox->getId(), $payload),
+                'realtime' => $this->dispatchRealtime($payload, $outbox->getId()),
+                default => null,
+            };
+
+            if ('mail' === $outbox->getChannel()) {
+                $outbox->replacePayload($this->redactedMailPayload());
+            }
+            $outbox->markPublished($this->clock->now());
+        } catch (\InvalidArgumentException $throwable) {
+            if ('mail' === $outbox->getChannel()) {
+                $outbox->replacePayload($this->redactedMailPayload());
+            }
+            $outbox->markFailed($this->clock->now(), $throwable->getMessage());
+            $this->entityManager->flush();
+
+            return;
+        } catch (\Throwable $throwable) {
+            $shouldRetry = $outbox->scheduleRetry($this->clock->now(), $throwable->getMessage());
+            if ('mail' === $outbox->getChannel()) {
+                if (!$shouldRetry) {
+                    $outbox->replacePayload($this->redactedMailPayload());
+                } elseif (!$mailPayloadWasProtected) {
+                    $outbox->replacePayload($this->payloadProtector->protect($payload));
+                }
+            }
+            $this->entityManager->flush();
+
+            if ($shouldRetry) {
+                throw $throwable;
+            }
+
+            return;
+        }
+
         $this->entityManager->flush();
     }
 
@@ -66,7 +102,7 @@ final readonly class DispatchOutboxMessageHandler
         $context = is_array($payload['context'] ?? null) ? $payload['context'] : [];
 
         if ('' === $to || '' === $subject || '' === $template) {
-            return;
+            throw new \InvalidArgumentException('Outbox mail payload must contain non-empty to, subject and template fields.');
         }
 
         $email = (new TemplatedEmail())
@@ -77,8 +113,7 @@ final readonly class DispatchOutboxMessageHandler
                 'headline' => $subject,
                 'body' => $template,
                 'data' => $context,
-            ])
-            ->messageId(sprintf('<%s@starter.local>', $messageId));
+            ]);
 
         if (isset($context['from']) && is_string($context['from'])) {
             $email->from($context['from']);
@@ -87,6 +122,17 @@ final readonly class DispatchOutboxMessageHandler
         $email->getHeaders()->addTextHeader('X-Starter-Outbox-Id', $messageId);
 
         $this->mailer->send($email);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function redactedMailPayload(): array
+    {
+        return [
+            'redacted' => true,
+            'reason' => 'mail_payload_protected',
+        ];
     }
 
     /**
@@ -99,7 +145,7 @@ final readonly class DispatchOutboxMessageHandler
         $private = (bool) ($payload['private'] ?? false);
 
         if ('' === $topic) {
-            return;
+            throw new \InvalidArgumentException('Outbox realtime payload must contain a non-empty topic field.');
         }
 
         if (!isset($data['eventId']) || !is_string($data['eventId']) || '' === trim($data['eventId'])) {

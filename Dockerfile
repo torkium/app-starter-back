@@ -3,7 +3,19 @@ FROM composer:2 AS vendor
 WORKDIR /app
 
 COPY composer.json composer.lock ./
-RUN composer install --no-interaction --no-scripts --prefer-dist --ignore-platform-req=ext-redis
+ARG INSTALL_DEV_DEPS=0
+RUN if [ "$INSTALL_DEV_DEPS" = "1" ]; then \
+        composer install --no-interaction --no-scripts --prefer-dist --no-autoloader --ignore-platform-req=ext-redis; \
+    else \
+        composer install --no-dev --no-interaction --no-scripts --prefer-dist --no-autoloader --ignore-platform-req=ext-redis; \
+    fi
+
+COPY . .
+RUN if [ "$INSTALL_DEV_DEPS" = "1" ]; then \
+        composer dump-autoload --optimize; \
+    else \
+        composer dump-autoload --no-dev --optimize --classmap-authoritative; \
+    fi
 
 FROM php:8.4-apache-bookworm
 
@@ -22,8 +34,8 @@ RUN apt-get update \
     && install -d -m 0755 -o www-data -g www-data /var/run/apache2 /var/lock/apache2 /var/log/apache2 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=vendor /app/vendor ./vendor
 COPY . .
+COPY --from=vendor /app/vendor ./vendor
 COPY docker/apache/vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/entrypoint.sh /usr/local/bin/starter-back-entrypoint
 

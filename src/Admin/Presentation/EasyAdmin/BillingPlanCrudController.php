@@ -15,8 +15,10 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Uuid;
 
+#[IsGranted('ROLE_SUPER_ADMIN')]
 final class BillingPlanCrudController extends AbstractCrudController
 {
     public static function getEntityFqcn(): string
@@ -34,7 +36,9 @@ final class BillingPlanCrudController extends AbstractCrudController
 
     public function configureActions(Actions $actions): Actions
     {
-        return $actions->disable(Action::EDIT, Action::DELETE);
+        return $actions
+            ->disable(Action::EDIT, Action::DELETE)
+            ->setPermission(Action::NEW, 'ROLE_SUPER_ADMIN');
     }
 
     public function configureFields(string $pageName): iterable

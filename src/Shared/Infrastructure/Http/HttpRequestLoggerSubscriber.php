@@ -63,7 +63,7 @@ final readonly class HttpRequestLoggerSubscriber implements EventSubscriberInter
         $content = [];
         $raw = trim($request->getContent());
 
-        if ('' !== $raw && str_contains((string) $request->headers->get('Content-Type', ''), 'application/json')) {
+        if ('' !== $raw && strlen($raw) <= 8192 && str_contains((string) $request->headers->get('Content-Type', ''), 'application/json')) {
             try {
                 $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
                 if (is_array($decoded)) {
@@ -72,6 +72,8 @@ final readonly class HttpRequestLoggerSubscriber implements EventSubscriberInter
             } catch (\JsonException) {
                 $content = ['_malformed_json' => true];
             }
+        } elseif (strlen($raw) > 8192) {
+            $content = ['_omitted' => 'body_too_large'];
         }
 
         return [
@@ -80,7 +82,20 @@ final readonly class HttpRequestLoggerSubscriber implements EventSubscriberInter
             'path' => $request->getPathInfo(),
             'query' => $this->sanitizer->sanitizeArray($request->query->all()),
             'body' => $content,
-            'ip' => $request->getClientIp(),
+            'ip' => $this->maskIp($request->getClientIp()),
         ];
+    }
+
+    private function maskIp(?string $ip): ?string
+    {
+        if (null === $ip) {
+            return null;
+        }
+
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            return preg_replace('/\.\d+$/', '.0', $ip);
+        }
+
+        return preg_replace('/:[0-9a-f]{1,4}$/i', ':0000', $ip);
     }
 }

@@ -18,6 +18,8 @@ interface DirectUploadStorageInterface
      */
     public function storeStream(string $objectKey, mixed $stream, int $expectedSize): array;
 
+    public function delete(string $objectKey): void;
+
     /**
      * @return resource
      */

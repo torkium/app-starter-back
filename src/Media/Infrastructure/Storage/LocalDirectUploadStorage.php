@@ -112,6 +112,17 @@ final readonly class LocalDirectUploadStorage implements DirectUploadStorageInte
         return $stream;
     }
 
+    public function delete(string $objectKey): void
+    {
+        $path = $this->buildPath($objectKey);
+        if (is_file($path)) {
+            @unlink($path);
+        }
+        if (is_file($path.'.part')) {
+            @unlink($path.'.part');
+        }
+    }
+
     private function buildPath(string $objectKey): string
     {
         return rtrim($this->uploadDirectory, '/').'/'.ltrim($objectKey, '/');

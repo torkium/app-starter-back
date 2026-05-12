@@ -85,7 +85,7 @@ http://localhost:8080/api
 - `config/jwt/private.pem`
 - `config/jwt/public.pem`
 
-JWT keys are never generated automatically at Docker runtime. In remote environments, provide stable keys through the runtime environment expected by the image.
+JWT keys are not generated automatically in dev/prod Docker runtime. The test entrypoint may generate ephemeral keys inside the container so `make test` works on a fresh clone. In remote environments, provide stable keys through the runtime environment expected by the image.
 
 ## Local Validation
 
@@ -132,9 +132,14 @@ make outbox-consume
 
 ## Runtime Notes
 
-- Messenger Doctrine transports are enabled by default with `auto_setup=1`
-- `make messenger-setup` is available if you want to force transport initialization explicitly
+- Messenger Doctrine transports are created by migrations; keep `auto_setup=0` outside dev/test
+- `make messenger-setup` is available for local repair/debug when needed
 - local media storage stays outside the default public tree and is served through authenticated endpoints
+- outbox delivery is at-least-once: mail/realtime consumers must tolerate duplicate `X-Starter-Outbox-Id`/Mercure ids
+- run `app:outbox:consume --loop` as the outbox dispatcher; timed-out deliveries are released with backoff
+- the Compose `outbox_dispatcher` service runs the outbox loop; add a separate scheduler service if your project later uses Symfony Scheduler tasks
+- `app:outbox:release-stuck` only releases in-flight deliveries by default; use `--include-failed` for explicit manual replay
+- keep production Compose/infra ports and secrets managed outside this starter when deploying through `starter_infra`
 
 ## Suggested Workflow With The Other Starters
 

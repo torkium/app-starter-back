@@ -45,9 +45,10 @@ security:
     access_control:
         - { path: ^/admin/login$, roles: PUBLIC_ACCESS }
         - { path: ^/admin/admin-user, roles: ROLE_SUPER_ADMIN }
+        - { path: ^/admin/(billing-plan|legal-document), roles: ROLE_SUPER_ADMIN }
         - { path: ^/admin/(user-consent|refresh-token|user-action-token|user-subscription|billing-event|media-asset|push-subscription|outbox-message), roles: ROLE_SUPER_ADMIN }
         - { path: ^/admin, roles: ROLE_ADMIN }
-        - { path: ^/api/(health|doc|doc\.json), roles: PUBLIC_ACCESS }
+        - { path: ^/api/(health|ready|doc|doc\.json), roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/(register|login|refresh|confirm-email|forgot-password|reset-password), roles: PUBLIC_ACCESS }
         - { path: ^/api/stripe/webhook, roles: PUBLIC_ACCESS }
         - { path: ^/api/billing/plans, roles: PUBLIC_ACCESS }

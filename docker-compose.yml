@@ -1,80 +1,113 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_DEV_DEPS: "0"
     ports:
       - "8080:8080"
+    restart: unless-stopped
     env_file:
       - .env
+    environment: &app_prod_environment
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      MESSENGER_TRANSPORT_DSN: doctrine://default?auto_setup=0
+      MESSENGER_MAIL_TRANSPORT_DSN: doctrine://default?queue_name=mail&auto_setup=0
+      MESSENGER_OUTBOX_TRANSPORT_DSN: doctrine://default?queue_name=outbox&auto_setup=0
+      MESSENGER_FAILED_TRANSPORT_DSN: doctrine://default?queue_name=failed&auto_setup=0
     volumes:
       - ./config/jwt:/run/starter-secrets/jwt:ro
+      - media_uploads:/app/var/media/uploads
     depends_on:
       db:
         condition: service_healthy
       mercure:
         condition: service_started
     healthcheck:
-      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/api/health') === false ? 1 : 0);"]
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/api/ready') === false ? 1 : 0);"]
       interval: 10s
       timeout: 5s
       retries: 6
 
   worker_default:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_DEV_DEPS: "0"
     command: php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M
+    restart: unless-stopped
     env_file:
       - .env
+    environment: *app_prod_environment
     volumes:
       - ./config/jwt:/run/starter-secrets/jwt:ro
+      - media_uploads:/app/var/media/uploads
     depends_on:
       db:
         condition: service_healthy
 
   worker_mail:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_DEV_DEPS: "0"
     command: php bin/console messenger:consume async_mail --time-limit=3600 --memory-limit=256M
+    restart: unless-stopped
     env_file:
       - .env
+    environment: *app_prod_environment
     volumes:
       - ./config/jwt:/run/starter-secrets/jwt:ro
+      - media_uploads:/app/var/media/uploads
     depends_on:
       db:
         condition: service_healthy
 
   worker_outbox:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_DEV_DEPS: "0"
     command: php bin/console messenger:consume async_outbox --time-limit=3600 --memory-limit=256M
+    restart: unless-stopped
     env_file:
       - .env
+    environment: *app_prod_environment
     volumes:
       - ./config/jwt:/run/starter-secrets/jwt:ro
+      - media_uploads:/app/var/media/uploads
     depends_on:
       db:
         condition: service_healthy
 
-  scheduler:
-    build: .
-    command:
-      - sh
-      - -lc
-      - while true; do php bin/console app:schedule:run; sleep 60; done
+  outbox_dispatcher:
+    build:
+      context: .
+      args:
+        INSTALL_DEV_DEPS: "0"
+    command: php bin/console app:outbox:consume --loop --sleep=1 --batch=50
+    restart: unless-stopped
     env_file:
       - .env
+    environment: *app_prod_environment
     volumes:
       - ./config/jwt:/run/starter-secrets/jwt:ro
+      - media_uploads:/app/var/media/uploads
     depends_on:
       db:
         condition: service_healthy
 
   db:
     image: mysql:8.4
-    command: ["mysqld", "--sql-mode="]
+    restart: unless-stopped
     environment:
       MYSQL_DATABASE: starter
       MYSQL_USER: app
       MYSQL_PASSWORD: app
       MYSQL_ROOT_PASSWORD: root
-    ports:
-      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot"]
       interval: 10s
@@ -82,11 +115,12 @@ services:
       retries: 10
 
   mercure:
-    image: dunglas/mercure:latest
+    image: dunglas/mercure:v0.18
+    restart: unless-stopped
     environment:
       SERVER_NAME: ":80"
-      MERCURE_PUBLISHER_JWT_KEY: "change-me"
-      MERCURE_SUBSCRIBER_JWT_KEY: "change-me"
+      MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_SECRET:?missing}"
+      MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_SECRET:?missing}"
       MERCURE_EXTRA_DIRECTIVES: |
         anonymous
         subscriptions
@@ -95,6 +129,9 @@ services:
 
   mailpit:
     image: axllent/mailpit:latest
-    ports:
-      - "1025:1025"
-      - "8025:8025"
+    profiles:
+      - dev
+
+volumes:
+  db_data:
+  media_uploads:

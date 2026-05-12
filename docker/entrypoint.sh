@@ -59,6 +59,17 @@ if { [ -z "$public_key_path" ] || [ ! -f "$public_key_path" ]; } && [ -f "$publi
   cp "$public_key_source" "$public_key_path"
 fi
 
+if [ "${APP_ENV:-}" = "test" ] && { [ ! -f "$private_key_path" ] || [ ! -f "$public_key_path" ]; }; then
+  if [ -z "$private_key_path" ] || [ -z "$public_key_path" ] || [ -z "${JWT_PASSPHRASE:-}" ]; then
+    echo "JWT_SECRET_KEY, JWT_PUBLIC_KEY and JWT_PASSPHRASE must be set to generate test JWT keys." >&2
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "$private_key_path")" "$(dirname "$public_key_path")"
+  openssl genrsa -aes256 -passout "pass:${JWT_PASSPHRASE}" -out "$private_key_path" 2048 >/dev/null 2>&1
+  openssl rsa -in "$private_key_path" -passin "pass:${JWT_PASSPHRASE}" -pubout -out "$public_key_path" >/dev/null 2>&1
+fi
+
 if [ -z "$private_key_path" ] || [ ! -f "$private_key_path" ]; then
   echo "JWT private key file is missing. Run make init locally or provide JWT_PRIVATE_KEY_PEM at runtime." >&2
   exit 1

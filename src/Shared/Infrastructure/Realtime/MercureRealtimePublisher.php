@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Shared\Infrastructure\Realtime;
 
 use App\Shared\Application\Port\RealtimePublisherInterface;
-use App\Shared\Infrastructure\Outbox\OutboxRecorder;
+use App\Shared\Application\Port\OutboxRecorderInterface;
 
 final readonly class MercureRealtimePublisher implements RealtimePublisherInterface
 {
     public function __construct(
-        private OutboxRecorder $outboxRecorder,
+        private OutboxRecorderInterface $outboxRecorder,
     ) {
     }
 

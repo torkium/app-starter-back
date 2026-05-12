@@ -8,6 +8,7 @@ use App\Shared\Domain\Entity\OutboxMessage;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ArrayField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 
 final class OutboxMessageCrudController extends AbstractReadOnlyCrudController
@@ -22,6 +23,8 @@ final class OutboxMessageCrudController extends AbstractReadOnlyCrudController
         yield IdField::new('id')->hideOnForm();
         yield TextField::new('topic');
         yield TextField::new('channel');
+        yield IntegerField::new('attemptCount');
+        yield DateTimeField::new('nextAttemptAt');
         yield DateTimeField::new('createdAt');
         yield DateTimeField::new('claimedAt');
         yield DateTimeField::new('deliveryStartedAt');

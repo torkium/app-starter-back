@@ -6,12 +6,12 @@ namespace App\Shared\Infrastructure\Mailer;
 
 use App\Shared\Application\Message\SendTransactionalEmailMessage;
 use App\Shared\Application\Port\MailerPortInterface;
-use App\Shared\Infrastructure\Outbox\OutboxRecorder;
+use App\Shared\Application\Port\OutboxRecorderInterface;
 
 final readonly class SymfonyMailerPort implements MailerPortInterface
 {
     public function __construct(
-        private OutboxRecorder $outboxRecorder,
+        private OutboxRecorderInterface $outboxRecorder,
         private string $fromAddress,
     ) {
     }

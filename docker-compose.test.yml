@@ -1,6 +1,9 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_DEV_DEPS: "1"
     env_file:
       - .env.example
       - .env.test
@@ -31,7 +34,7 @@ services:
       retries: 10
 
   mercure:
-    image: dunglas/mercure:latest
+    image: dunglas/mercure:v0.18
     environment:
       SERVER_NAME: ":80"
       MERCURE_PUBLISHER_JWT_KEY: "change-me"

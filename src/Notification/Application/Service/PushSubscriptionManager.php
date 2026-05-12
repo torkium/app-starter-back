@@ -8,7 +8,7 @@ use App\Identity\Domain\Entity\User;
 use App\Notification\Domain\Entity\PushSubscription;
 use App\Shared\Application\Port\ClockInterface;
 use App\Shared\Application\Port\TransactionManagerInterface;
-use App\Shared\Infrastructure\Outbox\OutboxRecorder;
+use App\Shared\Application\Port\OutboxRecorderInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -17,7 +17,7 @@ final readonly class PushSubscriptionManager
     public function __construct(
         private EntityManagerInterface $entityManager,
         private TransactionManagerInterface $transactionManager,
-        private OutboxRecorder $outboxRecorder,
+        private OutboxRecorderInterface $outboxRecorder,
         private ClockInterface $clock,
     ) {
     }

@@ -9,6 +9,8 @@ final class SensitiveValueSanitizer
     private const SENSITIVE_KEYS = [
         'authorization',
         'cookie',
+        'email',
+        'jwt',
         'password',
         'passwordhash',
         'token',
@@ -28,9 +30,11 @@ final class SensitiveValueSanitizer
 
         foreach ($data as $key => $value) {
             $normalizedKey = strtolower(str_replace(['-', '_'], '', (string) $key));
-            if (in_array($normalizedKey, self::SENSITIVE_KEYS, true)) {
-                $sanitized[$key] = '***';
-                continue;
+            foreach (self::SENSITIVE_KEYS as $sensitiveKey) {
+                if (str_contains($normalizedKey, $sensitiveKey)) {
+                    $sanitized[$key] = '***';
+                    continue 2;
+                }
             }
 
             if (is_array($value)) {
@@ -38,9 +42,13 @@ final class SensitiveValueSanitizer
                 continue;
             }
 
-            $sanitized[$key] = is_string($value) && mb_strlen($value) > 500
-                ? mb_substr($value, 0, 500).'...'
-                : $value;
+            if (is_string($value)) {
+                $value = preg_replace('/([?&][^=&#]*(?:token|code|secret|signature|key|credential|apikey|api_key)[^=&#]*=)[^&#]+/i', '$1***', $value) ?? $value;
+                $sanitized[$key] = mb_strlen($value) > 500 ? mb_substr($value, 0, 500).'...' : $value;
+                continue;
+            }
+
+            $sanitized[$key] = $value;
         }
 
         return $sanitized;

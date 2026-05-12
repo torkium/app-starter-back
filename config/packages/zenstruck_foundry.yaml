@@ -6,10 +6,10 @@ when@dev: &dev
             # Flush only once per call of `PersistentObjectFactory::create()`
             flush_once: true
 
-services:
-    App\Tests\Factory\:
-        resource: '%kernel.project_dir%/tests/Factory/'
-        autowire: true
-        autoconfigure: true
+    services:
+        App\Tests\Factory\:
+            resource: '%kernel.project_dir%/tests/Factory/'
+            autowire: true
+            autoconfigure: true
 
 when@test: *dev
