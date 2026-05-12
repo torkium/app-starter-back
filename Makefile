@@ -29,7 +29,7 @@ logs: ensure-env
 	$(COMPOSE) logs -f app
 
 logs-workers: ensure-env
-	$(COMPOSE) logs -f worker_default worker_mail worker_outbox scheduler
+	$(COMPOSE) logs -f worker_default worker_mail worker_outbox outbox_dispatcher
 
 sh: ensure-env
 	$(COMPOSE) exec app sh
