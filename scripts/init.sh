@@ -26,7 +26,7 @@ if [ ! -f "${PRIVATE_KEY}" ]; then
   openssl genrsa -out "${PRIVATE_KEY}" 4096 >/dev/null 2>&1
   echo "Created ${PRIVATE_KEY}"
 fi
-chmod 600 "${PRIVATE_KEY}"
+chmod 644 "${PRIVATE_KEY}"
 
 if [ ! -f "${PUBLIC_KEY}" ]; then
   openssl rsa -pubout -in "${PRIVATE_KEY}" -out "${PUBLIC_KEY}" >/dev/null 2>&1

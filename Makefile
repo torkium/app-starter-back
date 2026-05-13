@@ -57,6 +57,6 @@ outbox-consume: ensure-env
 	$(COMPOSE) exec app php bin/console app:outbox:consume --batch=50
 
 jwt-keys: ensure-env
-	$(COMPOSE) exec app sh -c "mkdir -p config/jwt && openssl genrsa -out config/jwt/private.pem 4096 && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem"
+	$(COMPOSE) exec app sh -c "mkdir -p config/jwt && openssl genrsa -out config/jwt/private.pem 4096 && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem && chmod 644 config/jwt/private.pem config/jwt/public.pem"
 
 .PHONY: ensure-env init up down restart ps config logs logs-workers sh migrate messenger-setup health test build cc outbox-consume jwt-keys

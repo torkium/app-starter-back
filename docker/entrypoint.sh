@@ -80,8 +80,25 @@ if [ -z "$public_key_path" ] || [ ! -f "$public_key_path" ]; then
   exit 1
 fi
 
-if [ -w "$private_key_path" ]; then
-  chmod 600 "$private_key_path"
-fi
+make_key_readable_by_php() {
+  local key_path="$1"
+
+  if [ ! -w "$key_path" ]; then
+    return 0
+  fi
+
+  case "$key_path" in
+    /app/config/jwt/*)
+      chmod 644 "$key_path"
+      ;;
+    *)
+      chown www-data:www-data "$key_path"
+      chmod 600 "$key_path"
+      ;;
+  esac
+}
+
+make_key_readable_by_php "$private_key_path"
+make_key_readable_by_php "$public_key_path"
 
 exec "$@"
