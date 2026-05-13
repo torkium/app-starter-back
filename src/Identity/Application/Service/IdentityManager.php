@@ -40,13 +40,15 @@ final readonly class IdentityManager
     public function register(string $email, string $password, string $firstName, string $lastName): void
     {
         $normalizedEmail = strtolower(trim($email));
+        $resolvedFirstName = '' !== trim($firstName) ? trim($firstName) : 'Utilisateur';
+        $resolvedLastName = trim($lastName);
         $existing = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $normalizedEmail]);
         if ($existing instanceof User) {
             return;
         }
 
-        $this->transactionManager->run(function () use ($normalizedEmail, $password, $firstName, $lastName): void {
-            $user = new User(Uuid::v7()->toRfc4122(), $normalizedEmail, '', $firstName, $lastName, $this->clock->now());
+        $this->transactionManager->run(function () use ($normalizedEmail, $password, $resolvedFirstName, $resolvedLastName): void {
+            $user = new User(Uuid::v7()->toRfc4122(), $normalizedEmail, '', $resolvedFirstName, $resolvedLastName, $this->clock->now());
             $user->setPasswordHash($this->passwordHasher->hashPassword($user, $password));
             $this->entityManager->persist($user);
 

@@ -59,4 +59,29 @@ final class AuthFlowTest extends ApiTestCase
         self::assertSame(Response::HTTP_CREATED, $secondRegister->getStatusCode(), $secondRegister->getContent());
         self::assertSame(['status' => 'registered'], $this->decodeJson($secondRegister));
     }
+
+    public function testRegisterWithoutNameFields(): void
+    {
+        $register = $this->jsonRequest('POST', '/api/auth/register', [
+            'email' => 'no-name@example.test',
+            'password' => 'VeryStrongPassw0rd!',
+        ]);
+
+        self::assertSame(Response::HTTP_CREATED, $register->getStatusCode(), $register->getContent());
+
+        $login = $this->jsonRequest('POST', '/api/auth/login', [
+            'email' => 'no-name@example.test',
+            'password' => 'VeryStrongPassw0rd!',
+        ]);
+        self::assertSame(Response::HTTP_OK, $login->getStatusCode(), $login->getContent());
+        $tokens = $this->decodeJson($login);
+
+        $me = $this->jsonRequest('GET', '/api/account/me', null, $this->authHeaders($tokens['access_token']));
+        $user = $this->decodeJson($me);
+
+        self::assertSame(Response::HTTP_OK, $me->getStatusCode(), $me->getContent());
+        self::assertSame('no-name@example.test', $user['email']);
+        self::assertSame('Utilisateur', $user['firstName']);
+        self::assertSame('', $user['lastName']);
+    }
 }

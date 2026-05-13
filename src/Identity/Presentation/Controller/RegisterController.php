@@ -31,8 +31,8 @@ final class RegisterController
             fields: [
                 'email' => [new Assert\NotBlank(), new Assert\Email(), new Assert\Length(max: 180)],
                 'password' => [new Assert\NotBlank(), new Assert\Length(min: 12, max: 255)],
-                'firstName' => [new Assert\NotBlank(), new Assert\Length(max: 120)],
-                'lastName' => [new Assert\NotBlank(), new Assert\Length(max: 120)],
+                'firstName' => new Assert\Optional([new Assert\NotBlank(), new Assert\Length(max: 120)]),
+                'lastName' => new Assert\Optional([new Assert\NotBlank(), new Assert\Length(max: 120)]),
             ],
             allowExtraFields: false,
             allowMissingFields: false,
@@ -42,8 +42,8 @@ final class RegisterController
         $identityManager->register(
             (string) $payload['email'],
             (string) $payload['password'],
-            (string) $payload['firstName'],
-            (string) $payload['lastName'],
+            (string) ($payload['firstName'] ?? ''),
+            (string) ($payload['lastName'] ?? ''),
         );
 
         return new JsonResponse(['status' => 'registered'], 201);
