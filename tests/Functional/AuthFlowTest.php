@@ -41,4 +41,22 @@ final class AuthFlowTest extends ApiTestCase
         self::assertSame(Response::HTTP_OK, $sessions->getStatusCode(), $sessions->getContent());
         self::assertCount(1, $this->decodeJson($sessions));
     }
+
+    public function testRegisterExistingEmailDoesNotLeakAccountExistence(): void
+    {
+        $firstRegister = $this->jsonRequest('POST', '/api/auth/register', [
+            'email' => 'existing@example.test',
+            'password' => 'VeryStrongPassw0rd!',
+        ]);
+
+        self::assertSame(Response::HTTP_CREATED, $firstRegister->getStatusCode(), $firstRegister->getContent());
+
+        $secondRegister = $this->jsonRequest('POST', '/api/auth/register', [
+            'email' => 'existing@example.test',
+            'password' => 'AnotherStrongPassw0rd!',
+        ]);
+
+        self::assertSame(Response::HTTP_CREATED, $secondRegister->getStatusCode(), $secondRegister->getContent());
+        self::assertSame(['status' => 'registered'], $this->decodeJson($secondRegister));
+    }
 }

@@ -42,7 +42,7 @@ final readonly class IdentityManager
         $normalizedEmail = strtolower(trim($email));
         $existing = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $normalizedEmail]);
         if ($existing instanceof User) {
-            throw ApiProblemException::unprocessable('Un compte existe déjà avec cet email.');
+            return;
         }
 
         $this->transactionManager->run(function () use ($normalizedEmail, $password, $firstName, $lastName): void {
