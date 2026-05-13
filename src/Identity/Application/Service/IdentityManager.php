@@ -60,11 +60,33 @@ final readonly class IdentityManager
             );
             $this->entityManager->persist($token);
 
+            $firstName = trim($user->getFirstName());
+            $intro = 'Votre espace est presque prêt.';
+            if ('' !== $firstName && 'Utilisateur' !== $firstName) {
+                $intro = sprintf('Bonjour %s, votre espace est presque prêt.', $firstName);
+            }
+            $frontBaseUrl = rtrim($this->frontBaseUrl, '/');
+
             $this->mailer->queue(
                 $user->getEmail(),
                 'Confirmez votre email',
-                'Confirmation de compte',
-                ['actionUrl' => sprintf('%s/verify-email?token=%s', $this->frontBaseUrl, $tokenValue)],
+                'Activez votre compte pour retrouver votre espace en toute sécurité.',
+                [
+                    'actionUrl' => sprintf('%s/verify-email?token=%s', $frontBaseUrl, $tokenValue),
+                    'logoUrl' => sprintf('%s/icons/icon-192.png', $frontBaseUrl),
+                    'brandName' => 'Starter',
+                    'brandTagline' => 'Votre espace applicatif',
+                    'ctaLabel' => 'Confirmer mon email',
+                    'eyebrow' => 'Bienvenue',
+                    'intro' => $intro,
+                    'description' => 'Confirmez votre adresse email pour activer votre compte et accéder à votre espace.',
+                    'details' => [
+                        'Votre accès reste protégé tant que cette adresse n’est pas validée.',
+                        'Le lien de confirmation reste valable pendant 48 heures.',
+                    ],
+                    'fallbackLabel' => 'Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :',
+                    'signature' => 'À très vite',
+                ],
             );
 
             $this->outboxRecorder->record('identity.user_registered', 'default', [
@@ -141,12 +163,27 @@ final readonly class IdentityManager
                 $this->clock->now()->modify('+2 hours'),
             );
             $this->entityManager->persist($token);
+            $frontBaseUrl = rtrim($this->frontBaseUrl, '/');
 
             $this->mailer->queue(
                 $user->getEmail(),
                 'Réinitialisation du mot de passe',
                 'Réinitialisation du mot de passe',
-                ['actionUrl' => sprintf('%s/reset-password?token=%s', $this->frontBaseUrl, $tokenValue)],
+                [
+                    'actionUrl' => sprintf('%s/reset-password?token=%s', $frontBaseUrl, $tokenValue),
+                    'logoUrl' => sprintf('%s/icons/icon-192.png', $frontBaseUrl),
+                    'brandName' => 'Starter',
+                    'brandTagline' => 'Votre espace applicatif',
+                    'ctaLabel' => 'Réinitialiser mon mot de passe',
+                    'eyebrow' => 'Sécurité du compte',
+                    'intro' => 'Une demande de réinitialisation vient d’être faite pour votre compte.',
+                    'description' => 'Choisissez un nouveau mot de passe pour retrouver l’accès à votre espace.',
+                    'details' => [
+                        'Ce lien est valable pendant 2 heures.',
+                        'Ignorez cet email si vous n’êtes pas à l’origine de la demande.',
+                    ],
+                    'fallbackLabel' => 'Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :',
+                ],
             );
         });
     }
@@ -181,12 +218,27 @@ final readonly class IdentityManager
                 ['email' => strtolower(trim($newEmail))],
             );
             $this->entityManager->persist($token);
+            $frontBaseUrl = rtrim($this->frontBaseUrl, '/');
 
             $this->mailer->queue(
                 $newEmail,
                 'Confirmez votre nouvelle adresse email',
                 'Changement d’email',
-                ['actionUrl' => sprintf('%s/confirm-email-change?token=%s', $this->frontBaseUrl, $tokenValue)],
+                [
+                    'actionUrl' => sprintf('%s/confirm-email-change?token=%s', $frontBaseUrl, $tokenValue),
+                    'logoUrl' => sprintf('%s/icons/icon-192.png', $frontBaseUrl),
+                    'brandName' => 'Starter',
+                    'brandTagline' => 'Votre espace applicatif',
+                    'ctaLabel' => 'Valider cette adresse',
+                    'eyebrow' => 'Paramètres du compte',
+                    'intro' => 'Vous avez demandé à associer cette adresse email à votre compte.',
+                    'description' => 'Validez ce changement pour continuer à recevoir les notifications importantes au bon endroit.',
+                    'details' => [
+                        'Ce lien est valable pendant 24 heures.',
+                        'Votre adresse actuelle reste active tant que cette confirmation n’est pas terminée.',
+                    ],
+                    'fallbackLabel' => 'Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :',
+                ],
             );
         });
     }

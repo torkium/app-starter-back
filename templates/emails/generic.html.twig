@@ -1,5 +1,129 @@
-<h1>{{ headline }}</h1>
-<p>{{ body }}</p>
-{% if data.actionUrl is defined %}
-    <p><a href="{{ data.actionUrl }}">Ouvrir le lien</a></p>
-{% endif %}
+{% set actionUrl = data.actionUrl is defined and data.actionUrl is not empty ? data.actionUrl : null %}
+{% set brandName = data.brandName|default('Starter') %}
+{% set brandTagline = data.brandTagline|default('Votre espace applicatif') %}
+{% set ctaLabel = data.ctaLabel|default('Ouvrir le lien') %}
+{% set eyebrow = data.eyebrow|default(brandName) %}
+{% set intro = data.intro|default(body) %}
+{% set description = data.description|default('Retrouvez votre espace en suivant le lien ci-dessous.') %}
+{% set details = data.details|default([]) %}
+{% set fallbackLabel = data.fallbackLabel|default('Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :') %}
+{% set signature = data.signature|default('L’équipe ' ~ brandName) %}
+{% set preheader = data.preheader|default(description) %}
+{% set logoUrl = data.logoUrl|default(null) %}
+
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="x-apple-disable-message-reformatting">
+    <title>{{ headline }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f6f8f6;color:#17211c;font-family:Arial,Helvetica,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;line-height:1px;font-size:1px;">
+        {{ preheader }}
+    </div>
+
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#f6f8f6;">
+        <tr>
+            <td align="center" style="padding:32px 16px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;max-width:640px;">
+                    <tr>
+                        <td style="padding:0 0 18px 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                                <tr>
+                                    <td width="52" height="52" align="center" style="width:52px;height:52px;border-radius:16px;background:#ffffff;border:1px solid #dbe4dc;">
+                                        {% if logoUrl %}
+                                            <img src="{{ logoUrl }}" width="38" height="38" alt="" style="display:block;width:38px;height:38px;border:0;">
+                                        {% else %}
+                                            <span style="display:block;color:#275541;font-size:22px;font-weight:700;line-height:52px;">{{ brandName|first|upper }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding-left:12px;">
+                                        <div style="font-size:24px;line-height:28px;font-weight:700;color:#275541;letter-spacing:0;">{{ brandName }}</div>
+                                        <div style="font-size:13px;line-height:18px;color:#66736a;">{{ brandTagline }}</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="background:#ffffff;border:1px solid #dbe4dc;border-radius:18px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                                <tr>
+                                    <td style="background:#275541;padding:28px 28px 24px 28px;">
+                                        <div style="font-size:13px;line-height:18px;font-weight:700;text-transform:uppercase;color:#f0c85a;letter-spacing:.08em;">{{ eyebrow }}</div>
+                                        <h1 style="margin:10px 0 0 0;color:#ffffff;font-size:30px;line-height:36px;font-weight:700;letter-spacing:0;">{{ headline }}</h1>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:30px 28px 10px 28px;">
+                                        <p style="margin:0;color:#17211c;font-size:18px;line-height:28px;font-weight:700;">{{ intro }}</p>
+                                        <p style="margin:14px 0 0 0;color:#66736a;font-size:16px;line-height:25px;">{{ description }}</p>
+                                    </td>
+                                </tr>
+
+                                {% if actionUrl %}
+                                    <tr>
+                                        <td style="padding:20px 28px 12px 28px;">
+                                            <table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                                                <tr>
+                                                    <td bgcolor="#3f7556" style="border-radius:999px;">
+                                                        <a href="{{ actionUrl }}" style="display:inline-block;padding:15px 24px;color:#ffffff;font-size:16px;line-height:20px;font-weight:700;text-decoration:none;border-radius:999px;">{{ ctaLabel }}</a>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+
+                                {% if details is iterable and details|length > 0 %}
+                                    <tr>
+                                        <td style="padding:18px 28px 4px 28px;">
+                                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#edf7f0;border-radius:14px;">
+                                                {% for detail in details %}
+                                                    <tr>
+                                                        <td width="28" valign="top" style="padding:14px 0 0 18px;color:#c9683d;font-size:18px;line-height:22px;">•</td>
+                                                        <td style="padding:14px 18px 0 4px;color:#334033;font-size:14px;line-height:21px;">{{ detail }}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                                <tr>
+                                                    <td colspan="2" height="14" style="height:14px;line-height:14px;font-size:1px;">&nbsp;</td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+
+                                {% if actionUrl %}
+                                    <tr>
+                                        <td style="padding:18px 28px 8px 28px;">
+                                            <p style="margin:0;color:#66736a;font-size:12px;line-height:18px;">{{ fallbackLabel }}</p>
+                                            <p style="margin:6px 0 0 0;word-break:break-all;color:#66736a;font-size:12px;line-height:18px;">
+                                                <a href="{{ actionUrl }}" style="color:#275541;text-decoration:underline;">{{ actionUrl }}</a>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+
+                                <tr>
+                                    <td style="padding:22px 28px 30px 28px;">
+                                        <p style="margin:0;color:#66736a;font-size:15px;line-height:23px;">{{ signature }}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:18px 8px 0 8px;text-align:center;color:#66736a;font-size:12px;line-height:18px;">
+                            Vous recevez cet email parce qu’une action a été demandée sur {{ brandName }}.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

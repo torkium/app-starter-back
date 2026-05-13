@@ -1,0 +1,25 @@
+{% set actionUrl = data.actionUrl is defined and data.actionUrl is not empty ? data.actionUrl : null %}
+{% set ctaLabel = data.ctaLabel|default('Ouvrir le lien') %}
+{% set intro = data.intro|default(body) %}
+{% set description = data.description|default('Retrouvez votre espace en suivant le lien ci-dessous.') %}
+{% set details = data.details|default([]) %}
+{% set signature = data.signature|default('L’équipe ' ~ data.brandName|default('Starter')) %}
+
+{{ headline }}
+
+{{ intro }}
+
+{{ description }}
+
+{% if actionUrl %}
+{{ ctaLabel }} :
+{{ actionUrl }}
+
+{% endif %}
+{% if details is iterable and details|length > 0 %}
+{% for detail in details %}
+- {{ detail }}
+{% endfor %}
+
+{% endif %}
+{{ signature }}

@@ -23,6 +23,7 @@ final readonly class SendTransactionalEmailMessageHandler
             ->to($message->to)
             ->subject($message->subject)
             ->htmlTemplate('emails/generic.html.twig')
+            ->textTemplate('emails/generic.txt.twig')
             ->context([
                 'headline' => $message->subject,
                 'body' => $message->template,

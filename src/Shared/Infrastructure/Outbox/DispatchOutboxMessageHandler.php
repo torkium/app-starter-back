@@ -109,6 +109,7 @@ final readonly class DispatchOutboxMessageHandler
             ->to($to)
             ->subject($subject)
             ->htmlTemplate('emails/generic.html.twig')
+            ->textTemplate('emails/generic.txt.twig')
             ->context([
                 'headline' => $subject,
                 'body' => $template,
