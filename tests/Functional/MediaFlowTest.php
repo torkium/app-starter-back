@@ -62,7 +62,7 @@ final class MediaFlowTest extends ApiTestCase
 
         $list = $this->jsonRequest('GET', '/api/media/assets', null, $this->authHeaders($tokens['access_token']));
         self::assertSame(Response::HTTP_OK, $list->getStatusCode(), $list->getContent());
-        $assets = $this->decodeJson($list);
+        $assets = $this->decodeJson($list)['items'];
         self::assertCount(1, $assets);
         self::assertArrayNotHasKey('objectKey', $assets[0]);
 

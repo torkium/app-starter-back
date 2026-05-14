@@ -18,4 +18,9 @@ interface StripeCheckoutGatewayInterface
      * @return array<string, mixed>
      */
     public function parseWebhook(string $payload, ?string $signature): array;
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function retrieveSubscription(string $subscriptionId): ?array;
 }

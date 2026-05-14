@@ -17,7 +17,7 @@ final class AdminAccessTest extends ApiTestCase
     {
         $this->loginAdmin();
         self::assertResponseIsSuccessful();
-        self::assertStringContainsString('Starter Back Admin', (string) $this->client->getResponse()->getContent());
+        self::assertStringContainsString('My App Admin', (string) $this->client->getResponse()->getContent());
     }
 
     public function testRoleAdminCannotAccessSuperAdminAreas(): void
@@ -52,14 +52,14 @@ final class AdminAccessTest extends ApiTestCase
     {
         $application = new Application(self::$kernel);
         $tester = new CommandTester($application->find('app:admin-user:create'));
-        putenv('STARTER_ADMIN_PASSWORD=Sup3rStrongAdminPass!');
+        putenv('APP_ADMIN_PASSWORD=Sup3rStrongAdminPass!');
         $exitCode = $tester->execute([
             'email' => 'ops@example.test',
             'display-name' => 'Ops Admin',
-            '--password-env' => 'STARTER_ADMIN_PASSWORD',
+            '--password-env' => 'APP_ADMIN_PASSWORD',
             '--super-admin' => true,
         ]);
-        putenv('STARTER_ADMIN_PASSWORD');
+        putenv('APP_ADMIN_PASSWORD');
 
         self::assertSame(0, $exitCode);
         self::assertStringContainsString('Admin user "ops@example.test" created.', $tester->getDisplay());
@@ -82,7 +82,7 @@ final class AdminAccessTest extends ApiTestCase
 
         AdminUserFactory::createOne(array_merge([
             'email' => $email,
-            'displayName' => 'Starter Admin',
+            'displayName' => 'My App Admin',
             'roles' => $roles,
         ], $attributes));
 

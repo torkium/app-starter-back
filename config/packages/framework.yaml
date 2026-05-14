@@ -34,6 +34,10 @@ framework:
             policy: token_bucket
             limit: 30
             rate: { interval: '1 minute', amount: 30 }
+        media_upload:
+            policy: token_bucket
+            limit: 20
+            rate: { interval: '1 minute', amount: 20 }
 
 when@test:
     framework:

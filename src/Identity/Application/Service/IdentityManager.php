@@ -13,9 +13,9 @@ use App\Identity\Domain\Entity\UserConsent;
 use App\Shared\Application\Http\ApiProblemException;
 use App\Shared\Application\Port\ClockInterface;
 use App\Shared\Application\Port\MailerPortInterface;
+use App\Shared\Application\Port\OutboxRecorderInterface;
 use App\Shared\Application\Port\RealtimePublisherInterface;
 use App\Shared\Application\Port\TransactionManagerInterface;
-use App\Shared\Application\Port\OutboxRecorderInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -62,32 +62,30 @@ final readonly class IdentityManager
             );
             $this->entityManager->persist($token);
 
-            $firstName = trim($user->getFirstName());
-            $intro = 'Votre espace est presque prêt.';
-            if ('' !== $firstName && 'Utilisateur' !== $firstName) {
-                $intro = sprintf('Bonjour %s, votre espace est presque prêt.', $firstName);
+            $firstName = $user->getFirstName();
+            $intro = 'Votre espace My App est presque prêt.';
+            if ('Utilisateur' !== $firstName && '' !== $firstName) {
+                $intro = sprintf('Bonjour %s, votre espace My App est presque prêt.', $firstName);
             }
             $frontBaseUrl = rtrim($this->frontBaseUrl, '/');
 
             $this->mailer->queue(
                 $user->getEmail(),
                 'Confirmez votre email',
-                'Activez votre compte pour retrouver votre espace en toute sécurité.',
+                'Activez votre compte pour retrouver vos contenus, vos données et vos préférences au même endroit.',
                 [
                     'actionUrl' => sprintf('%s/verify-email?token=%s', $frontBaseUrl, $tokenValue),
                     'logoUrl' => sprintf('%s/icons/icon-192.png', $frontBaseUrl),
-                    'brandName' => 'Starter',
-                    'brandTagline' => 'Votre espace applicatif',
                     'ctaLabel' => 'Confirmer mon email',
-                    'eyebrow' => 'Bienvenue',
+                    'eyebrow' => 'Bienvenue sur My App',
                     'intro' => $intro,
-                    'description' => 'Confirmez votre adresse email pour activer votre compte et accéder à votre espace.',
+                    'description' => 'Confirmez votre adresse email pour activer votre compte. Vous pourrez ensuite organiser vos contenus, suivre vos objectifs et construire des préférences plus simples à tenir.',
                     'details' => [
                         'Votre accès reste protégé tant que cette adresse n’est pas validée.',
                         'Le lien de confirmation reste valable pendant 48 heures.',
                     ],
                     'fallbackLabel' => 'Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :',
-                    'signature' => 'À très vite',
+                    'signature' => 'Bienvenue dans My App',
                 ],
             );
 
@@ -174,11 +172,9 @@ final readonly class IdentityManager
                 [
                     'actionUrl' => sprintf('%s/reset-password?token=%s', $frontBaseUrl, $tokenValue),
                     'logoUrl' => sprintf('%s/icons/icon-192.png', $frontBaseUrl),
-                    'brandName' => 'Starter',
-                    'brandTagline' => 'Votre espace applicatif',
                     'ctaLabel' => 'Réinitialiser mon mot de passe',
                     'eyebrow' => 'Sécurité du compte',
-                    'intro' => 'Une demande de réinitialisation vient d’être faite pour votre compte.',
+                    'intro' => 'Une demande de réinitialisation vient d’être faite pour votre compte My App.',
                     'description' => 'Choisissez un nouveau mot de passe pour retrouver l’accès à votre espace.',
                     'details' => [
                         'Ce lien est valable pendant 2 heures.',
@@ -198,6 +194,7 @@ final readonly class IdentityManager
             $token->markUsed($this->clock->now());
             $user = $token->getUser();
             $user->setPasswordHash($this->passwordHasher->hashPassword($user, $password));
+            $this->revokeActiveRefreshTokens($user, 'password_reset');
         });
     }
 
@@ -229,11 +226,9 @@ final readonly class IdentityManager
                 [
                     'actionUrl' => sprintf('%s/confirm-email-change?token=%s', $frontBaseUrl, $tokenValue),
                     'logoUrl' => sprintf('%s/icons/icon-192.png', $frontBaseUrl),
-                    'brandName' => 'Starter',
-                    'brandTagline' => 'Votre espace applicatif',
                     'ctaLabel' => 'Valider cette adresse',
                     'eyebrow' => 'Paramètres du compte',
-                    'intro' => 'Vous avez demandé à associer cette adresse email à votre compte.',
+                    'intro' => 'Vous avez demandé à associer cette adresse email à votre compte My App.',
                     'description' => 'Validez ce changement pour continuer à recevoir les notifications importantes au bon endroit.',
                     'details' => [
                         'Ce lien est valable pendant 24 heures.',
@@ -250,7 +245,16 @@ final readonly class IdentityManager
      */
     public function listSessions(User $user, ?string $currentSessionId = null): array
     {
-        $sessions = $this->entityManager->getRepository(RefreshToken::class)->findBy(['user' => $user], ['createdAt' => 'DESC']);
+        $sessions = $this->entityManager->getRepository(RefreshToken::class)->findBy(['user' => $user], ['createdAt' => 'DESC'], 100);
+        if (null !== $currentSessionId && '' !== $currentSessionId && !$this->containsRefreshTokenId($sessions, $currentSessionId)) {
+            $currentSession = $this->entityManager->getRepository(RefreshToken::class)->findOneBy([
+                'id' => $currentSessionId,
+                'user' => $user,
+            ]);
+            if ($currentSession instanceof RefreshToken) {
+                $sessions[] = $currentSession;
+            }
+        }
 
         return array_map(
             fn (RefreshToken $session): array => [
@@ -267,6 +271,20 @@ final readonly class IdentityManager
             ],
             array_values(array_filter($sessions, static fn (mixed $session): bool => $session instanceof RefreshToken)),
         );
+    }
+
+    /**
+     * @param list<mixed> $sessions
+     */
+    private function containsRefreshTokenId(array $sessions, string $sessionId): bool
+    {
+        foreach ($sessions as $session) {
+            if ($session instanceof RefreshToken && hash_equals($session->getId(), $sessionId)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function revokeSession(User $user, string $sessionId): void
@@ -413,8 +431,13 @@ final readonly class IdentityManager
         }
 
         $this->transactionManager->run(function () use ($token, $newEmail): void {
+            $existing = $this->entityManager->getRepository(User::class)->findOneBy(['email' => strtolower(trim($newEmail))]);
+            if ($existing instanceof User && $existing->getId() !== $token->getUser()->getId()) {
+                throw ApiProblemException::unprocessable('Cette adresse email est déjà utilisée.');
+            }
+
             $token->markUsed($this->clock->now());
-            $token->getUser()->changeEmail($newEmail);
+            $token->getUser()->changeVerifiedEmail($newEmail);
         });
     }
 
@@ -505,5 +528,17 @@ final readonly class IdentityManager
         ]);
 
         return $token instanceof RefreshToken ? $token : null;
+    }
+
+    private function revokeActiveRefreshTokens(User $user, string $reason): void
+    {
+        $sessions = $this->entityManager->getRepository(RefreshToken::class)->findBy(['user' => $user]);
+        foreach ($sessions as $session) {
+            if (!$session instanceof RefreshToken || !$session->isActive($this->clock->now())) {
+                continue;
+            }
+
+            $session->revoke($this->clock->now(), $reason);
+        }
     }
 }

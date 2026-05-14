@@ -93,14 +93,31 @@ jobs:
           set -euo pipefail
           export JWT_PRIVATE_KEY_PEM="$(cat config/jwt/private.pem)"
           export JWT_PUBLIC_KEY_PEM="$(cat config/jwt/public.pem)"
+          network_name="starter-back-smoke-${{ github.sha }}"
+          db_name="starter-back-smoke-db-${{ github.sha }}"
 
-          cid="$(docker run -d -p 18080:8080 \
+          docker network create "$network_name"
+          db_cid="$(docker run -d --network "$network_name" --name "$db_name" \
+            -e MYSQL_DATABASE=starter \
+            -e MYSQL_USER=app \
+            -e MYSQL_PASSWORD=app \
+            -e MYSQL_ROOT_PASSWORD=root \
+            mysql:8.4)"
+
+          for _ in $(seq 1 30); do
+            if docker exec "$db_cid" mysqladmin ping -h 127.0.0.1 -uapp -papp --silent; then
+              break
+            fi
+            sleep 2
+          done
+
+          cid="$(docker run -d --network "$network_name" -p 18080:8080 \
             -e APP_ENV=prod \
             -e APP_SECRET=test-secret \
             -e APP_FRONT_BASE_URL=http://localhost:3000 \
             -e APP_MEDIA_PUBLIC_BASE_URL=http://localhost:18080/uploads/media \
             -e DEFAULT_URI=http://localhost:18080 \
-            -e DATABASE_URL='mysql://app:app@db:3306/starter?serverVersion=8.0.32&charset=utf8mb4' \
+            -e DATABASE_URL="mysql://app:app@${db_name}:3306/starter?serverVersion=8.0.32&charset=utf8mb4" \
             -e JWT_SECRET_KEY='/app/var/runtime/jwt/private.pem' \
             -e JWT_PUBLIC_KEY='/app/var/runtime/jwt/public.pem' \
             -e JWT_PASSPHRASE=test-jwt-passphrase \
@@ -119,17 +136,21 @@ jobs:
 
           cleanup() {
             docker rm -f "$cid" >/dev/null 2>&1 || true
+            docker rm -f "$db_cid" >/dev/null 2>&1 || true
+            docker network rm "$network_name" >/dev/null 2>&1 || true
           }
           trap cleanup EXIT
 
+          docker exec "$cid" php bin/console doctrine:migrations:migrate --no-interaction
+
           for _ in $(seq 1 20); do
-            if curl -fsS http://127.0.0.1:18080/api/health >/dev/null; then
+            if curl -fsS http://127.0.0.1:18080/api/ready >/dev/null; then
               break
             fi
             sleep 2
           done
 
-          curl -fsS http://127.0.0.1:18080/api/health
+          curl -fsS http://127.0.0.1:18080/api/ready
           docker exec "$cid" php bin/console about --env=prod
 
   mysql-functional:

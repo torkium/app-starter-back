@@ -120,7 +120,7 @@ final readonly class DispatchOutboxMessageHandler
             $email->from($context['from']);
         }
 
-        $email->getHeaders()->addTextHeader('X-Starter-Outbox-Id', $messageId);
+        $email->getHeaders()->addTextHeader('X-My-App-Outbox-Id', $messageId);
 
         $this->mailer->send($email);
     }

@@ -20,7 +20,7 @@ final readonly class HealthController
     {
         return new JsonResponse([
             'status' => 'ok',
-            'service' => 'starter_back',
+            'service' => 'my_app_back',
         ]);
     }
 
@@ -32,13 +32,13 @@ final readonly class HealthController
         } catch (\Throwable) {
             return new JsonResponse([
                 'status' => 'unavailable',
-                'service' => 'starter_back',
+                'service' => 'my_app_back',
             ], 503);
         }
 
         return new JsonResponse([
             'status' => 'ok',
-            'service' => 'starter_back',
+            'service' => 'my_app_back',
         ]);
     }
 }

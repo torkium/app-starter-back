@@ -31,6 +31,7 @@ services:
             $authForgotPasswordLimiter: '@limiter.auth_forgot_password'
             $authSensitiveLimiter: '@limiter.auth_sensitive'
             $webhookLimiter: '@limiter.webhook'
+            $mediaUploadLimiter: '@limiter.media_upload'
 
     App\Shared\Infrastructure\Http\HttpRequestLoggerSubscriber:
         arguments:

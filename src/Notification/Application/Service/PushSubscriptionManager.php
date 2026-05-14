@@ -7,8 +7,8 @@ namespace App\Notification\Application\Service;
 use App\Identity\Domain\Entity\User;
 use App\Notification\Domain\Entity\PushSubscription;
 use App\Shared\Application\Port\ClockInterface;
-use App\Shared\Application\Port\TransactionManagerInterface;
 use App\Shared\Application\Port\OutboxRecorderInterface;
+use App\Shared\Application\Port\TransactionManagerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 

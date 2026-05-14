@@ -49,6 +49,12 @@ class UserSubscription
     #[ORM\Column]
     private \DateTimeImmutable $updatedAt;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $lastStripeEventCreatedAt = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $lastStripeEventTypeRank = null;
+
     public function __construct(string $id, User $user, BillingPlan $plan, string $status, \DateTimeImmutable $createdAt)
     {
         $this->id = $id;
@@ -114,6 +120,31 @@ class UserSubscription
         return $this->updatedAt;
     }
 
+    public function canApplyStripeEvent(\DateTimeImmutable $eventCreatedAt, int $eventTypeRank): bool
+    {
+        if (null === $this->lastStripeEventCreatedAt) {
+            return true;
+        }
+
+        if ($eventCreatedAt > $this->lastStripeEventCreatedAt) {
+            return true;
+        }
+
+        if ($eventCreatedAt < $this->lastStripeEventCreatedAt) {
+            return false;
+        }
+
+        return null === $this->lastStripeEventTypeRank || $eventTypeRank > $this->lastStripeEventTypeRank;
+    }
+
+    public function hasAmbiguousStripeEventOrder(\DateTimeImmutable $eventCreatedAt, int $eventTypeRank): bool
+    {
+        return null !== $this->lastStripeEventCreatedAt
+            && $eventCreatedAt == $this->lastStripeEventCreatedAt
+            && null !== $this->lastStripeEventTypeRank
+            && $eventTypeRank <= $this->lastStripeEventTypeRank;
+    }
+
     public function sync(
         BillingPlan $plan,
         string $status,
@@ -123,6 +154,8 @@ class UserSubscription
         ?\DateTimeImmutable $currentPeriodEnd,
         bool $cancelAtPeriodEnd,
         \DateTimeImmutable $updatedAt,
+        ?\DateTimeImmutable $stripeEventCreatedAt = null,
+        ?int $stripeEventTypeRank = null,
     ): void {
         $this->plan = $plan;
         $this->status = $status;
@@ -132,6 +165,14 @@ class UserSubscription
         $this->currentPeriodEnd = $currentPeriodEnd;
         $this->cancelAtPeriodEnd = $cancelAtPeriodEnd;
         $this->updatedAt = $updatedAt;
+        if (null !== $stripeEventCreatedAt) {
+            if (null === $this->lastStripeEventCreatedAt || $stripeEventCreatedAt > $this->lastStripeEventCreatedAt) {
+                $this->lastStripeEventCreatedAt = $stripeEventCreatedAt;
+                $this->lastStripeEventTypeRank = $stripeEventTypeRank;
+            } elseif ($stripeEventCreatedAt == $this->lastStripeEventCreatedAt) {
+                $this->lastStripeEventTypeRank = max($this->lastStripeEventTypeRank ?? 0, $stripeEventTypeRank ?? 0);
+            }
+        }
     }
 
     public function toView(): array

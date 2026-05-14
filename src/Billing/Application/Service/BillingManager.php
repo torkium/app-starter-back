@@ -11,8 +11,8 @@ use App\Billing\Domain\Entity\UserSubscription;
 use App\Identity\Domain\Entity\User;
 use App\Shared\Application\Http\ApiProblemException;
 use App\Shared\Application\Port\ClockInterface;
-use App\Shared\Application\Port\TransactionManagerInterface;
 use App\Shared\Application\Port\OutboxRecorderInterface;
+use App\Shared\Application\Port\TransactionManagerInterface;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
@@ -85,16 +85,33 @@ final readonly class BillingManager
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return array{items:list<array<string, mixed>>,pagination:array{limit:int,offset:int,nextOffset:?int,hasMore:bool}}
      */
-    public function history(User $user): array
+    public function history(User $user, int $limit = 50, int $offset = 0): array
     {
-        $events = $this->entityManager->getRepository(BillingEvent::class)->findBy(['user' => $user], ['occurredAt' => 'DESC']);
-
-        return array_map(
-            static fn (BillingEvent $event): array => $event->toView(),
-            array_values(array_filter($events, static fn (mixed $event): bool => $event instanceof BillingEvent)),
+        $limit = max(1, min(100, $limit));
+        $offset = max(0, $offset);
+        $events = $this->entityManager->getRepository(BillingEvent::class)->findBy(
+            ['user' => $user],
+            ['occurredAt' => 'DESC', 'id' => 'DESC'],
+            $limit + 1,
+            $offset,
         );
+        $hasMore = count($events) > $limit;
+        $events = array_slice($events, 0, $limit);
+
+        return [
+            'items' => array_map(
+                static fn (BillingEvent $event): array => $event->toUserHistoryView(),
+                array_values(array_filter($events, static fn (mixed $event): bool => $event instanceof BillingEvent)),
+            ),
+            'pagination' => [
+                'limit' => $limit,
+                'offset' => $offset,
+                'nextOffset' => $hasMore ? $offset + $limit : null,
+                'hasMore' => $hasMore,
+            ],
+        ];
     }
 
     public function handleWebhook(string $payload, ?string $signature): void
@@ -133,11 +150,11 @@ final readonly class BillingManager
                 $this->entityManager->persist($billingEvent);
 
                 if (str_starts_with($eventType, 'customer.subscription.')) {
-                    $this->syncSubscriptionFromStripeData($data, $user);
+                    $this->syncSubscriptionFromStripeData($data, $user, $occurredAt, $this->stripeSubscriptionEventTypeRank($eventType));
                 }
 
                 if ('checkout.session.completed' === $eventType) {
-                    $this->syncSubscriptionFromCheckoutData($data, $user);
+                    $this->syncSubscriptionFromCheckoutData($data, $user, $occurredAt);
                 }
 
                 $this->outboxRecorder->record('billing.webhook_received', 'default', [
@@ -151,7 +168,7 @@ final readonly class BillingManager
         }
     }
 
-    private function syncSubscriptionFromCheckoutData(array $data, ?User $user): void
+    private function syncSubscriptionFromCheckoutData(array $data, ?User $user, \DateTimeImmutable $eventCreatedAt): void
     {
         if (!$user instanceof User) {
             return;
@@ -173,6 +190,10 @@ final readonly class BillingManager
             $this->entityManager->persist($subscription);
         }
 
+        if (null !== $subscription->getStripeSubscriptionId()) {
+            return;
+        }
+
         $subscription->sync(
             $plan,
             'checkout_completed',
@@ -191,10 +212,31 @@ final readonly class BillingManager
         ]);
     }
 
-    private function syncSubscriptionFromStripeData(array $data, ?User $user): void
+    private function syncSubscriptionFromStripeData(array $data, ?User $user, \DateTimeImmutable $eventCreatedAt, int $eventTypeRank): void
     {
         if (!$user instanceof User) {
             return;
+        }
+
+        $subscription = $this->entityManager->getRepository(UserSubscription::class)->findOneBy(['user' => $user]);
+        $appliedStripeEventCreatedAt = $eventCreatedAt;
+        $appliedStripeEventTypeRank = $eventTypeRank;
+
+        if ($subscription instanceof UserSubscription && !$subscription->canApplyStripeEvent($eventCreatedAt, $eventTypeRank)) {
+            if (!$subscription->hasAmbiguousStripeEventOrder($eventCreatedAt, $eventTypeRank)) {
+                return;
+            }
+
+            $currentStripeSubscription = is_string($data['id'] ?? null)
+                ? $this->stripeGateway->retrieveSubscription($data['id'])
+                : null;
+            if (null === $currentStripeSubscription) {
+                return;
+            }
+
+            $data = $currentStripeSubscription;
+            $appliedStripeEventCreatedAt = $this->clock->now();
+            $appliedStripeEventTypeRank = PHP_INT_MAX;
         }
 
         $planCode = is_array($data['metadata'] ?? null) ? (string) ($data['metadata']['plan_code'] ?? '') : '';
@@ -207,7 +249,6 @@ final readonly class BillingManager
             return;
         }
 
-        $subscription = $this->entityManager->getRepository(UserSubscription::class)->findOneBy(['user' => $user]);
         if (!$subscription instanceof UserSubscription) {
             $subscription = new UserSubscription(Uuid::v7()->toRfc4122(), $user, $plan, 'pending', $this->clock->now());
             $this->entityManager->persist($subscription);
@@ -229,6 +270,8 @@ final readonly class BillingManager
             $end,
             (bool) ($data['cancel_at_period_end'] ?? false),
             $this->clock->now(),
+            $appliedStripeEventCreatedAt,
+            $appliedStripeEventTypeRank,
         );
 
         $this->outboxRecorder->record('billing.subscription_updated', 'default', [
@@ -236,6 +279,16 @@ final readonly class BillingManager
             'planCode' => $plan->getCode(),
             'status' => (string) ($data['status'] ?? 'unknown'),
         ]);
+    }
+
+    private function stripeSubscriptionEventTypeRank(string $eventType): int
+    {
+        return match ($eventType) {
+            'customer.subscription.deleted' => 300,
+            'customer.subscription.updated' => 200,
+            'customer.subscription.created' => 100,
+            default => 0,
+        };
     }
 
     private function resolveUserFromEventData(array $data): ?User

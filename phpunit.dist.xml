@@ -15,7 +15,7 @@
         <ini name="error_reporting" value="-1" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="KERNEL_CLASS" value="App\Kernel" force="true" />
-        <server name="DATABASE_URL" value="mysql://app:app@db:3306/starter_test?serverVersion=8.0.32&amp;charset=utf8mb4" force="true" />
+        <server name="DATABASE_URL" value="mysql://my_app:my_app@db:3306/my_app_test?serverVersion=8.0.32&amp;charset=utf8mb4" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
     </php>
 

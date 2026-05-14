@@ -21,8 +21,8 @@ resolve_path() {
 
 private_key_path="$(resolve_path "${JWT_SECRET_KEY:-}")"
 public_key_path="$(resolve_path "${JWT_PUBLIC_KEY:-}")"
-private_key_source="/run/starter-secrets/jwt/private.pem"
-public_key_source="/run/starter-secrets/jwt/public.pem"
+private_key_source="/run/my_app-secrets/jwt/private.pem"
+public_key_source="/run/my_app-secrets/jwt/public.pem"
 
 write_pem_file() {
   local target_path="$1"

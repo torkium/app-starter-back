@@ -20,7 +20,7 @@ final class AdminDashboardController extends AbstractDashboardController
 
     public function configureDashboard(): Dashboard
     {
-        return Dashboard::new()->setTitle('Starter Back Admin');
+        return Dashboard::new()->setTitle('My App Admin');
     }
 
     public function configureMenuItems(): iterable

@@ -43,7 +43,7 @@ final readonly class OutboxPayloadProtector
      */
     public function reveal(array $payload): array
     {
-        if (!$this->isProtected($payload)) {
+        if (($payload[self::MARKER] ?? false) !== true) {
             return $payload;
         }
 

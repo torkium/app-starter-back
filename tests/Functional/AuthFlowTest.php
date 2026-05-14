@@ -42,24 +42,6 @@ final class AuthFlowTest extends ApiTestCase
         self::assertCount(1, $this->decodeJson($sessions));
     }
 
-    public function testRegisterExistingEmailDoesNotLeakAccountExistence(): void
-    {
-        $firstRegister = $this->jsonRequest('POST', '/api/auth/register', [
-            'email' => 'existing@example.test',
-            'password' => 'VeryStrongPassw0rd!',
-        ]);
-
-        self::assertSame(Response::HTTP_CREATED, $firstRegister->getStatusCode(), $firstRegister->getContent());
-
-        $secondRegister = $this->jsonRequest('POST', '/api/auth/register', [
-            'email' => 'existing@example.test',
-            'password' => 'AnotherStrongPassw0rd!',
-        ]);
-
-        self::assertSame(Response::HTTP_CREATED, $secondRegister->getStatusCode(), $secondRegister->getContent());
-        self::assertSame(['status' => 'registered'], $this->decodeJson($secondRegister));
-    }
-
     public function testRegisterWithoutNameFields(): void
     {
         $register = $this->jsonRequest('POST', '/api/auth/register', [
@@ -83,5 +65,23 @@ final class AuthFlowTest extends ApiTestCase
         self::assertSame('no-name@example.test', $user['email']);
         self::assertSame('Utilisateur', $user['firstName']);
         self::assertSame('', $user['lastName']);
+    }
+
+    public function testRegisterExistingEmailDoesNotLeakAccountExistence(): void
+    {
+        $firstRegister = $this->jsonRequest('POST', '/api/auth/register', [
+            'email' => 'existing@example.test',
+            'password' => 'VeryStrongPassw0rd!',
+        ]);
+
+        self::assertSame(Response::HTTP_CREATED, $firstRegister->getStatusCode(), $firstRegister->getContent());
+
+        $secondRegister = $this->jsonRequest('POST', '/api/auth/register', [
+            'email' => 'existing@example.test',
+            'password' => 'AnotherStrongPassw0rd!',
+        ]);
+
+        self::assertSame(Response::HTTP_CREATED, $secondRegister->getStatusCode(), $secondRegister->getContent());
+        self::assertSame(['status' => 'registered'], $this->decodeJson($secondRegister));
     }
 }

@@ -104,4 +104,13 @@ class BillingEvent
             'payload' => $this->payload,
         ];
     }
+
+    public function toUserHistoryView(): array
+    {
+        return [
+            'externalId' => $this->externalId,
+            'type' => $this->type,
+            'occurredAt' => $this->occurredAt->format(\DATE_ATOM),
+        ];
+    }
 }

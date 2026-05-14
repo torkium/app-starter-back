@@ -138,6 +138,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->updatedAt = new \DateTimeImmutable();
     }
 
+    public function changeVerifiedEmail(string $email): void
+    {
+        $this->email = strtolower(trim($email));
+        $this->emailVerified = true;
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
     /**
      * @param list<string> $roles
      */

@@ -6,10 +6,19 @@ require dirname(__DIR__).'/vendor/autoload.php';
 
 $_SERVER['APP_ENV'] = $_ENV['APP_ENV'] = 'test';
 $_SERVER['APP_DEBUG'] = $_ENV['APP_DEBUG'] = '1';
+putenv('APP_ENV=test');
+putenv('APP_DEBUG=1');
 
 if (method_exists(Dotenv::class, 'bootEnv')) {
     $dotenvPath = is_file(dirname(__DIR__).'/.env') ? dirname(__DIR__).'/.env' : dirname(__DIR__).'/.env.example';
-    (new Dotenv())->bootEnv($dotenvPath);
+    (new Dotenv())->usePutenv()->bootEnv($dotenvPath, 'test');
+}
+
+foreach (['APP_ENV', 'APP_DEBUG', 'DATABASE_URL'] as $name) {
+    if (isset($_SERVER[$name])) {
+        $_ENV[$name] = $_SERVER[$name];
+        putenv($name.'='.$_SERVER[$name]);
+    }
 }
 
 if ($_SERVER['APP_DEBUG']) {

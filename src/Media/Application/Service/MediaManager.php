@@ -9,8 +9,8 @@ use App\Media\Application\Port\DirectUploadStorageInterface;
 use App\Media\Domain\Entity\MediaAsset;
 use App\Shared\Application\Http\ApiProblemException;
 use App\Shared\Application\Port\ClockInterface;
-use App\Shared\Application\Port\TransactionManagerInterface;
 use App\Shared\Application\Port\OutboxRecorderInterface;
+use App\Shared\Application\Port\TransactionManagerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -36,16 +36,33 @@ final readonly class MediaManager
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return array{items:list<array<string, mixed>>,pagination:array{limit:int,offset:int,nextOffset:?int,hasMore:bool}}
      */
-    public function listAssets(User $user): array
+    public function listAssets(User $user, int $limit = 50, int $offset = 0): array
     {
-        $assets = $this->entityManager->getRepository(MediaAsset::class)->findBy(['user' => $user], ['createdAt' => 'DESC']);
-
-        return array_map(
-            static fn (MediaAsset $asset): array => $asset->toView(),
-            array_values(array_filter($assets, static fn (mixed $asset): bool => $asset instanceof MediaAsset)),
+        $limit = max(1, min(100, $limit));
+        $offset = max(0, $offset);
+        $assets = $this->entityManager->getRepository(MediaAsset::class)->findBy(
+            ['user' => $user],
+            ['createdAt' => 'DESC', 'id' => 'DESC'],
+            $limit + 1,
+            $offset,
         );
+        $hasMore = count($assets) > $limit;
+        $assets = array_slice($assets, 0, $limit);
+
+        return [
+            'items' => array_map(
+                static fn (MediaAsset $asset): array => $asset->toView(),
+                array_values(array_filter($assets, static fn (mixed $asset): bool => $asset instanceof MediaAsset)),
+            ),
+            'pagination' => [
+                'limit' => $limit,
+                'offset' => $offset,
+                'nextOffset' => $hasMore ? $offset + $limit : null,
+                'hasMore' => $hasMore,
+            ],
+        ];
     }
 
     /**

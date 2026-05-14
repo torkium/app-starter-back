@@ -35,7 +35,7 @@ fi
 chmod 644 "${PUBLIC_KEY}"
 
 cat <<'EOF'
-Starter back initialized.
+My App back initialized.
 
 Next steps:
 1. Review .env and replace any remaining placeholder values if needed

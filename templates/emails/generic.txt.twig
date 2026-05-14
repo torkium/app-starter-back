@@ -1,9 +1,9 @@
 {% set actionUrl = data.actionUrl is defined and data.actionUrl is not empty ? data.actionUrl : null %}
 {% set ctaLabel = data.ctaLabel|default('Ouvrir le lien') %}
 {% set intro = data.intro|default(body) %}
-{% set description = data.description|default('Retrouvez votre espace en suivant le lien ci-dessous.') %}
+{% set description = data.description|default('Retrouvez votre espace My App en suivant le lien ci-dessous.') %}
 {% set details = data.details|default([]) %}
-{% set signature = data.signature|default('L’équipe ' ~ data.brandName|default('Starter')) %}
+{% set signature = data.signature|default('L’équipe My App') %}
 
 {{ headline }}
 

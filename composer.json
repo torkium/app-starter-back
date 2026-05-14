@@ -1,5 +1,5 @@
 {
-    "name": "starter/starter-back",
+    "name": "my-app/back",
     "description": "Production-minded Symfony starter backend with DDD, ports and adapters, auth, billing, realtime, media, and infrastructure-ready foundations.",
     "type": "project",
     "license": "proprietary",
@@ -50,7 +50,7 @@
         "symfony/browser-kit": "8.0.*",
         "symfony/css-selector": "8.0.*",
         "symfony/maker-bundle": "^1.67",
-        "symfony/web-profiler-bundle": "^8.0",
+        "symfony/web-profiler-bundle": "8.0.*",
         "zenstruck/foundry": ">=2.9.2"
     },
     "config": {

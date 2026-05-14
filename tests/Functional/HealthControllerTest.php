@@ -15,7 +15,7 @@ final class HealthControllerTest extends ApiTestCase
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         self::assertSame([
             'status' => 'ok',
-            'service' => 'starter_back',
+            'service' => 'my_app_back',
         ], $this->decodeJson($response));
     }
 }

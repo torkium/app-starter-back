@@ -37,14 +37,14 @@ RUN apt-get update \
 COPY . .
 COPY --from=vendor /app/vendor ./vendor
 COPY docker/apache/vhost.conf /etc/apache2/sites-available/000-default.conf
-COPY docker/entrypoint.sh /usr/local/bin/starter-back-entrypoint
+COPY docker/entrypoint.sh /usr/local/bin/app-starter-back-entrypoint
 
-RUN chmod +x /usr/local/bin/starter-back-entrypoint \
+RUN chmod +x /usr/local/bin/app-starter-back-entrypoint \
     && mkdir -p config/jwt var/cache var/log \
     && php bin/console assets:install public --no-interaction \
     && chown -R www-data:www-data /app /var/run/apache2 /var/lock/apache2 /var/log/apache2
 
 EXPOSE 8080
 
-ENTRYPOINT ["starter-back-entrypoint"]
+ENTRYPOINT ["app-starter-back-entrypoint"]
 CMD ["apache2-foreground"]

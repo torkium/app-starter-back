@@ -10,6 +10,7 @@ use App\Identity\Domain\Entity\User;
 use App\Shared\Application\Http\ApiProblemException;
 use Stripe\Checkout\Session;
 use Stripe\Event;
+use Stripe\Exception\ApiErrorException;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\StripeClient;
 use Stripe\Webhook;
@@ -103,5 +104,20 @@ final readonly class StripeCheckoutGateway implements StripeCheckoutGatewayInter
         }
 
         return $event->toArray();
+    }
+
+    public function retrieveSubscription(string $subscriptionId): ?array
+    {
+        if ('' === trim($this->secretKey ?? '') || '' === trim($subscriptionId)) {
+            return null;
+        }
+
+        $client = new StripeClient($this->secretKey ?? '');
+
+        try {
+            return $client->subscriptions->retrieve($subscriptionId)->toArray();
+        } catch (ApiErrorException) {
+            return null;
+        }
     }
 }

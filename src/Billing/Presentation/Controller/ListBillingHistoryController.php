@@ -9,18 +9,23 @@ use App\Identity\Domain\Entity\User;
 use App\Shared\Application\Http\ApiProblemException;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class ListBillingHistoryController
 {
     #[Route('/api/billing/history', name: 'api_billing_history', methods: ['GET'])]
-    public function __invoke(Security $security, BillingManager $billingManager): JsonResponse
+    public function __invoke(Request $request, Security $security, BillingManager $billingManager): JsonResponse
     {
         $user = $security->getUser();
         if (!$user instanceof User) {
             throw ApiProblemException::unauthorized();
         }
 
-        return new JsonResponse($billingManager->history($user));
+        return new JsonResponse($billingManager->history(
+            $user,
+            $request->query->getInt('limit', 50),
+            $request->query->getInt('offset', 0),
+        ));
     }
 }

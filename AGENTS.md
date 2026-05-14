@@ -1,6 +1,6 @@
-# starter_back
+# app-starter-back
 
-Starter backend Symfony DDD centré sur `User`, sans notion de `Profile`.
+My App backend Symfony DDD centré sur `User`.
 
 ## Principes
 

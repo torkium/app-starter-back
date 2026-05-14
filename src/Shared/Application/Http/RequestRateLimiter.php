@@ -14,6 +14,7 @@ final readonly class RequestRateLimiter
         private RateLimiterFactory $authForgotPasswordLimiter,
         private RateLimiterFactory $authSensitiveLimiter,
         private RateLimiterFactory $webhookLimiter,
+        private RateLimiterFactory $mediaUploadLimiter,
     ) {
     }
 
@@ -40,6 +41,11 @@ final readonly class RequestRateLimiter
     public function consumeWebhook(string $key): void
     {
         $this->consume($this->webhookLimiter, $key);
+    }
+
+    public function consumeMediaUpload(string $key): void
+    {
+        $this->consume($this->mediaUploadLimiter, $key);
     }
 
     private function consume(RateLimiterFactory $factory, string $key): void

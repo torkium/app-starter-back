@@ -60,7 +60,7 @@ final class BillingPlanCrudController extends AbstractCrudController
         return new BillingPlan(
             Uuid::v7()->toRfc4122(),
             'starter_monthly',
-            'Starter Monthly',
+            'My App Monthly',
             null,
             1990,
             'eur',

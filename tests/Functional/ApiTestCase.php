@@ -103,11 +103,27 @@ abstract class ApiTestCase extends WebTestCase
     private function resetDatabase(): void
     {
         $connection = $this->entityManager()->getConnection();
+        $this->assertResetTargetsTestDatabase($connection);
+
         $schemaManager = $connection->createSchemaManager();
         $tables = $schemaManager->listTableNames();
 
         $this->dropDatabaseTables($connection, $tables);
         $this->initializeDatabaseSchema();
+    }
+
+    private function assertResetTargetsTestDatabase(Connection $connection): void
+    {
+        $environment = (string) ($_SERVER['APP_ENV'] ?? $_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: '');
+        $databaseName = $connection->getDatabase();
+
+        if ('test' !== $environment || null === $databaseName || !str_ends_with($databaseName, '_test')) {
+            throw new \RuntimeException(sprintf(
+                'Refusing to reset database "%s" while APP_ENV is "%s". Functional tests may only reset a *_test database in the test environment.',
+                $databaseName ?? '(unknown)',
+                '' !== $environment ? $environment : '(unknown)',
+            ));
+        }
     }
 
     /**
@@ -145,7 +161,10 @@ abstract class ApiTestCase extends WebTestCase
         }
 
         if (is_dir($uploadDirectory)) {
-            $filesystem->remove($uploadDirectory);
+            $iterator = new \FilesystemIterator($uploadDirectory, \FilesystemIterator::SKIP_DOTS);
+            foreach ($iterator as $item) {
+                $filesystem->remove($item->getPathname());
+            }
         }
 
         $filesystem->mkdir($uploadDirectory, 0775);

@@ -1,14 +1,10 @@
-# starter_back
+# app-starter-back
 
-Production-minded Symfony 8 starter backend built around DDD, ports and adapters, and a single `User` aggregate as the main application actor.
-
-This repo is designed to be reusable on its own, or as part of the full starter trio with:
-- `starter_front`: the companion Next.js frontend starter
-- `starter_infra`: the companion Docker/CI-CD/operations starter
+Production-minded Symfony 8 backend built around DDD, ports and adapters, and a single `User` aggregate as the main application actor.
 
 ## Purpose
 
-Use `starter_back` when you want a backend foundation that already handles the application plumbing so you can focus on business domains:
+Use `app-starter-back` when you want a backend foundation that already handles the application plumbing so you can focus on business domains:
 
 - authentication and account lifecycle
 - transactional email flows
@@ -18,7 +14,7 @@ Use `starter_back` when you want a backend foundation that already handles the a
 - async processing
 - observability-ready runtime conventions
 
-The starter intentionally contains no dating-specific concepts, no `Profile`, and no product-specific business workflows.
+The backend intentionally keeps business domains isolated from shared technical plumbing.
 
 ## What Is Included
 
@@ -33,7 +29,7 @@ The starter intentionally contains no dating-specific concepts, no `Profile`, an
 - Mercure-ready realtime integration
 - direct media upload flow with short-lived upload token + authenticated retrieval
 - Nelmio API documentation on `/api/doc`
-- reusable functional test base (`ApiTestCase`, factories, starter flows)
+- reusable functional test base (`ApiTestCase`, factories, functional flows)
 - local Docker setup with MySQL, Mercure, and Mailpit
 - Make targets for local lifecycle, tests, and operations
 
@@ -43,35 +39,19 @@ The starter intentionally contains no dating-specific concepts, no `Profile`, an
 - GNU Make
 - OpenSSL for local JWT key generation during `make init`
 
-## Related Starters
+## Related Repositories
 
-- `starter_front`
-  Use it if you also want a ready-made Next.js frontend already wired for SSR auth, API proxying, runtime config, PWA, and realtime.
-
-- `starter_infra`
-  Use it if you want the full deployment/orchestration layer with Docker Compose, Nginx, Mercure, workers, scheduler, observability, and GitHub Actions.
-
-Typical combinations:
-- `starter_back` alone: bring your own frontend and infrastructure
-- `starter_back` + `starter_front`: application layer only, with your own infra
-- `starter_back` + `starter_front` + `starter_infra`: full starter platform
+- `app-starter-front`: Next.js frontend wired for SSR auth, API proxying, runtime config, PWA, and realtime.
+- `app-starter-infra`: deployment/orchestration layer with Docker Compose, Nginx, Mercure, workers, scheduler, observability, and GitHub Actions.
 
 ## Quick Start
+
+For the full My App stack, prefer `app-starter-infra` and its `make dev-up` flow. The Compose file in this repository is intended for backend-only work, isolated tests, and local debugging.
 
 ```bash
 make init
 make up
 make migrate
-```
-
-To turn this starter into a named project repository, run:
-
-```bash
-./scripts/init-project.sh \
-  --project-name my-app \
-  --back-repo my-app-back \
-  --front-repo my-app-front \
-  --infra-repo my-app-infra
 ```
 
 Local API:
@@ -98,7 +78,7 @@ make test
 
 ## Admin Back Office
 
-The starter now includes an EasyAdmin back office isolated from the public JWT user flow.
+My App includes an EasyAdmin back office isolated from the public JWT user flow.
 
 Admin login:
 
@@ -135,19 +115,18 @@ make outbox-consume
 - Messenger Doctrine transports are created by migrations; keep `auto_setup=0` outside dev/test
 - `make messenger-setup` is available for local repair/debug when needed
 - local media storage stays outside the default public tree and is served through authenticated endpoints
-- outbox delivery is at-least-once: mail/realtime consumers must tolerate duplicate `X-Starter-Outbox-Id`/Mercure ids
+- outbox delivery is at-least-once: mail/realtime consumers must tolerate duplicate `X-My-App-Outbox-Id`/Mercure ids
 - run `app:outbox:consume --loop` as the outbox dispatcher; timed-out deliveries are released with backoff
-- the Compose `outbox_dispatcher` service runs the outbox loop; add a separate scheduler service if your project later uses Symfony Scheduler tasks
 - `app:outbox:release-stuck` only releases in-flight deliveries by default; use `--include-failed` for explicit manual replay
-- keep production Compose/infra ports and secrets managed outside this starter when deploying through `starter_infra`
+- keep production Compose/infra ports and secrets managed outside this repository when deploying through `app-starter-infra`
 
-## Suggested Workflow With The Other Starters
+## Suggested Workflow With The Other Repositories
 
 If you use the full trio:
 
-1. Initialize `starter_back`
-2. Initialize `starter_front`
-3. Initialize `starter_infra`
-4. Start the full stack from `starter_infra`
+1. Initialize `app-starter-back`
+2. Initialize `app-starter-front`
+3. Initialize `app-starter-infra`
+4. Start the full stack from `app-starter-infra`
 
-For full-stack setup and deployment bootstrap, see the related documentation in `starter_infra`.
+For full-stack setup and deployment bootstrap, see the related documentation in `app-starter-infra`.

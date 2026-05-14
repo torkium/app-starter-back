@@ -94,8 +94,8 @@ final class OutboxConsumeCommandTest extends ApiTestCase
     {
         $id = Uuid::v7()->toRfc4122();
         $claimToken = Uuid::v7()->toRfc4122();
-        $message = new OutboxMessage($id, 'internal.audit_event', 'default', [
-            'sourceUrl' => 'https://example.test/internal',
+        $message = new OutboxMessage($id, 'outbox.example.completed', 'default', [
+            'sourceUrl' => 'https://example.test/source.csv',
         ], new \DateTimeImmutable());
         $message->claim($claimToken, new \DateTimeImmutable());
 
