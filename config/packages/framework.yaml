@@ -42,3 +42,16 @@ framework:
 when@test:
     framework:
         test: true
+        rate_limiter:
+            auth_login:
+                policy: no_limit
+            auth_register:
+                policy: no_limit
+            auth_forgot_password:
+                policy: no_limit
+            auth_sensitive:
+                policy: no_limit
+            webhook:
+                policy: no_limit
+            media_upload:
+                policy: no_limit

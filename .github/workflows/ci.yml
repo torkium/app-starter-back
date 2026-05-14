@@ -169,5 +169,15 @@ jobs:
 
       - name: Run MySQL-backed functional tests in Docker
         run: |
+          cleanup() {
+            docker compose -f docker-compose.test.yml down -v --remove-orphans
+          }
+          trap cleanup EXIT
+
           docker compose -f docker-compose.test.yml build app
-          docker compose -f docker-compose.test.yml run --rm app php bin/phpunit --do-not-cache-result
+          docker compose -f docker-compose.test.yml up -d --wait db mercure mailpit
+          docker compose -f docker-compose.test.yml ps
+          docker compose -f docker-compose.test.yml run --rm --no-deps app php bin/phpunit --do-not-cache-result || {
+            docker compose -f docker-compose.test.yml logs --no-color db app
+            exit 1
+          }
